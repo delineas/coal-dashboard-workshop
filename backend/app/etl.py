@@ -36,12 +36,15 @@ CREATE TABLE plants (
 CREATE TABLE units (
     tracker_id TEXT PRIMARY KEY,
     plant_id TEXT NOT NULL REFERENCES plants (id),
+    name TEXT NOT NULL,
     country TEXT NOT NULL,
     status_2017 TEXT,
     mw_2017 REAL,
     status_2023 TEXT,
     mw_2023 REAL,
-    start_year INTEGER,
+    start_year TEXT,
+    retired_year TEXT,
+    technology TEXT,
     comparable INTEGER NOT NULL,
     op_2017 REAL GENERATED ALWAYS AS (CASE WHEN status_2017 = 'operating' THEN mw_2017 ELSE 0 END),
     op_2023 REAL GENERATED ALWAYS AS (CASE WHEN status_2023 = 'operating' THEN mw_2023 ELSE 0 END)
@@ -137,18 +140,26 @@ class Plant:
 class Unit:
     tracker_id: str
     plant_id: str
+    name: str
     country: str
     status_2017: str | None = None
     mw_2017: float | None = None
     status_2023: str | None = None
     mw_2023: float | None = None
-    start_year: int | None = None
+    start_year: str = ""
+    retired_year: str = ""
+    technology: str = ""
 
     @property
     def comparable(self) -> bool:
         if self.status_2017 is None:
-            return self.start_year is not None and self.start_year >= 2017
+            return self.start_year.isdigit() and int(self.start_year) >= 2017
         return self.status_2023 is not None
+
+    def set_details(self, row: dict[str, str]) -> None:
+        self.start_year = row["Start year"].strip()
+        self.retired_year = row["Year retired"].strip()
+        self.technology = row["Combustion technology"].strip().lower()
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -215,22 +226,27 @@ def build_plants(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]
 def merge_units(
     rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]], plant_of_unit: dict[str, str]
 ) -> dict[str, Unit]:
-    units = {
-        row["Tracker ID"]: Unit(
+    units = {}
+    for row in rows_2017:
+        unit = Unit(
             row["Tracker ID"],
             plant_of_unit[row["Tracker ID"]],
+            row["Unit"].strip(),
             row["Country"],
             row["Status"].lower(),
             parse_float(row["Capacity (MW)"]),
         )
-        for row in rows_2017
-    }
+        unit.set_details(row)
+        units[unit.tracker_id] = unit
     for row in rows_2023:
-        unit = units.setdefault(row["Tracker ID"], Unit(row["Tracker ID"], row["GEM location ID"], row["Country"]))
+        unit = units.setdefault(
+            row["Tracker ID"], Unit(row["Tracker ID"], row["GEM location ID"], row["Unit"], row["Country"])
+        )
+        unit.name = row["Unit"]
         unit.country = row["Country"]
         unit.status_2023 = row["Status"].lower()
         unit.mw_2023 = parse_float(row["Capacity (MW)"])
-        unit.start_year = int(row["Start year"]) if row["Start year"] else None
+        unit.set_details(row)
     return units
 
 
@@ -251,18 +267,21 @@ def build(csv_2017: Path, csv_2023: Path, db_path: Path) -> Counter[str]:
             ],
         )
         conn.executemany(
-            "INSERT INTO units (tracker_id, plant_id, country, status_2017, mw_2017, status_2023, mw_2023,"
-            " start_year, comparable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO units (tracker_id, plant_id, name, country, status_2017, mw_2017, status_2023, mw_2023,"
+            " start_year, retired_year, technology, comparable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 (
                     u.tracker_id,
                     u.plant_id,
+                    u.name,
                     u.country,
                     u.status_2017,
                     u.mw_2017,
                     u.status_2023,
                     u.mw_2023,
                     u.start_year,
+                    u.retired_year,
+                    u.technology,
                     u.comparable,
                 )
                 for u in units.values()

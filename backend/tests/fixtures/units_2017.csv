@@ -1,13 +1,13 @@
-Tracker ID,Unit,Plant,Capacity (MW),Status,Country,Subnational unit,Owner,Parent,Latitude,Longitude,Wiki page
-G1,Alpha Unit 1,Alpha,100,Operating,Atlantis,North,Owner A,Parent A,10,20,w/alpha
-G2,Alpha Unit 2,Alpha,50,Retired,Atlantis,North,Owner A,Parent A,10,20,w/alpha
-G3,Beta Unit 1,Beta,"1,200",Operating,Lemuria,East,Owner B,Parent B,30,40,w/beta
-G3,Beta Unit 1,Beta,600,Cancelled,Lemuria,East,Owner B,Parent B,30,40,w/beta
-G5,Delta Unit 1,Delta,80,Operating,Turkey,West,Owner D,Parent D,1,2,w/delta
-G6,Epsilon Unit 1,Epsilon,70,Operating,Atlantis,South,Owner E,Parent E,5,5,w/epsilon
-G7,Zeta Unit 1,Zeta,40,,Atlantis,South,,,5,5,
-,To come,Eta,350,Pre,Atlantis,,,,5,5,
-G10,Kappa Unit 1,Kappa,200,Operating,Atlantis,North,Owner K,Parent K,11,21,w/kappa
-G11,Kappa Unit 2,Kappa,150,Operating,Atlantis,North,Owner K,Parent K,11,21,w/kappa
-G12,Lambda Unit 1,Lambda,90,Operating,Atlantis,North,Owner L,Parent L,,,w/lambda
-,,,,,,,,,,,
+Tracker ID,Unit,Plant,Capacity (MW),Status,Country,Subnational unit,Owner,Parent,Latitude,Longitude,Wiki page,Start year,Year retired,Combustion technology
+G1,Alpha Unit 1,Alpha,100,Operating,Atlantis,North,Owner A,Parent A,10,20,w/alpha,1990,,Subcritical
+G2,Alpha Unit 2,Alpha,50,Retired,Atlantis,North,Owner A,Parent A,10,20,w/alpha,1990,,Subcritical
+G3,Beta Unit 1,Beta,"1,200",Operating,Lemuria,East,Owner B,Parent B,30,40,w/beta,1990,,Subcritical
+G3,Beta Unit 1,Beta,600,Cancelled,Lemuria,East,Owner B,Parent B,30,40,w/beta,1990,,Subcritical
+G5,Delta Unit 1,Delta,80,Operating,Turkey,West,Owner D,Parent D,1,2,w/delta,1990,,Subcritical
+G6,Epsilon Unit 1,Epsilon,70,Operating,Atlantis,South,Owner E,Parent E,5,5,w/epsilon,1990,,Subcritical
+G7,Zeta Unit 1,Zeta,40,,Atlantis,South,,,5,5,,1990,,Subcritical
+,To come,Eta,350,Pre,Atlantis,,,,5,5,,1990,,Subcritical
+G10,Kappa Unit 1,Kappa,200,Operating,Atlantis,North,Owner K,Parent K,11,21,w/kappa,1990,,Subcritical
+G11,Kappa Unit 2,Kappa,150,Operating,Atlantis,North,Owner K,Parent K,11,21,w/kappa,1990,,Subcritical
+G12,Lambda Unit 1,Lambda,90,Operating,Atlantis,North,Owner L,Parent L,,,w/lambda,1990s,,Subcritical
+,,,,,,,,,,,,,,
