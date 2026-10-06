@@ -69,6 +69,7 @@ The ETL changes these 2017 names to the 2023 names:
 ### 4.4 Bad rows
 
 - The ETL discards 2017 rows with an empty status or an empty capacity (200 rows).
+- The ETL discards 2017 rows with an empty `Tracker ID` (2 rows, status `pre`).
 - For a duplicate `Tracker ID` in 2017, the ETL keeps the first row and discards the others.
 - The ETL prints a summary of the discarded rows.
 - Units without coordinates count in the totals. They do not show on maps.
