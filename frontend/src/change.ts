@@ -15,3 +15,5 @@ export const changes: Record<Change, { label: string; fill: string; stroke: stri
 }
 
 export const changeOrder = Object.keys(changes) as Change[]
+
+export const yearModeColor = '#4f46e5'

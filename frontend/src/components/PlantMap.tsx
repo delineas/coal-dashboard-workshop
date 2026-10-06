@@ -1,12 +1,11 @@
 import 'leaflet/dist/leaflet.css'
 import { latLngBounds } from 'leaflet'
-import { useEffect, useState, type ReactNode } from 'react'
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet'
-import { Link } from 'react-router'
-import { plantPath, type MapPlant } from '../api/plants'
-import { changes, type Change } from '../change'
-import { formatMw } from '../format'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import type { MapPlant } from '../api/plants'
+import { changes, yearModeColor, type Change } from '../change'
 import ChangeLegend from './ChangeLegend'
+import PlantClusterLayer from './PlantClusterLayer'
 
 const TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
 const TILE_ATTRIBUTION = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
@@ -57,7 +56,7 @@ function ModeControl({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) =>
 }
 
 function pathOptions(change: Change | null) {
-  const colors = change ? changes[change] : { fill: '#4f46e5', stroke: '#4f46e5' }
+  const colors = change ? changes[change] : { fill: yearModeColor, stroke: yearModeColor }
   return { color: colors.stroke, fillColor: colors.fill, fillOpacity: 0.85, weight: 1 }
 }
 
@@ -97,30 +96,22 @@ export default function PlantMap({
   fitToPlants?: boolean
 }) {
   const [mode, setMode] = useState<Mode>('change')
-  const visible = mode === 'change' ? plants : plants.filter((p) => plantMw(p, mode) > 0)
+  const markers = useMemo(
+    () =>
+      plants
+        .filter((p) => mode === 'change' || plantMw(p, mode) > 0)
+        .map((p) => {
+          const change = mode === 'change' ? p.change : null
+          return { plant: p, radius: radius(plantMw(p, mode)), change, color: pathOptions(change) }
+        }),
+    [plants, mode],
+  )
 
   return (
     <div className="relative" style={{ height }}>
       <BaseMap center={[25, 60]} zoom={2}>
         {fitToPlants && <FitToPlants plants={plants} />}
-        {visible.map((p) => (
-          <CircleMarker
-            key={p.id}
-            center={[p.lat, p.lon]}
-            radius={radius(plantMw(p, mode))}
-            pathOptions={pathOptions(mode === 'change' ? p.change : null)}
-          >
-            <Popup>
-              <p className="font-semibold text-zinc-900">{p.name}</p>
-              <p className="tabular-nums text-zinc-600">
-                {formatMw(p.mw17)} MW → {formatMw(p.mw23)} MW
-              </p>
-              <Link to={plantPath(p.id)} className="font-medium">
-                View plant →
-              </Link>
-            </Popup>
-          </CircleMarker>
-        ))}
+        <PlantClusterLayer markers={markers} />
       </BaseMap>
       <div className="absolute top-2 right-2 z-[400]">
         <ModeControl mode={mode} onChange={setMode} />
