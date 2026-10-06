@@ -1,0 +1,25 @@
+language: 'typescript'
+layer: 'application'
+
+tasks:
+  dev:
+    command: 'npm run dev'
+    toolchains: 'system'
+    preset: 'server'
+  build:
+    command: 'npm run build'
+    toolchains: 'system'
+    inputs:
+      - 'src/**/*'
+      - 'index.html'
+      - 'package.json'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+    outputs:
+      - 'dist'
+  lint:
+    command: 'npm run lint'
+    toolchains: 'system'
+    inputs:
+      - 'src/**/*'
+      - '.oxlintrc.json'

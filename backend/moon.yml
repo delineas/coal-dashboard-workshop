@@ -1,0 +1,14 @@
+language: 'python'
+layer: 'application'
+
+tasks:
+  dev:
+    command: '../.venv/bin/uvicorn app.main:app --port 8000 --reload'
+    toolchains: 'system'
+    preset: 'server'
+  test:
+    command: '../.venv/bin/python -m pytest'
+    toolchains: 'system'
+    inputs:
+      - 'app/**/*'
+      - 'tests/**/*'

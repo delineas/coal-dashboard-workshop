@@ -1,0 +1,6 @@
+projects:
+  backend: 'backend'
+  frontend: 'frontend'
+
+vcs:
+  defaultBranch: 'main'
