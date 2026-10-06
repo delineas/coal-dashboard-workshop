@@ -1,7 +1,8 @@
 import csv
 import sqlite3
 import sys
-from collections import defaultdict
+from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 
 from .db import DB_PATH
@@ -19,9 +20,37 @@ COUNTRY_NAMES_2017 = {
 }
 COUNTRIES_ONLY_2017 = {"Jordan", "Reunion"}
 
+SCHEMA = """
+CREATE TABLE units (
+    tracker_id TEXT PRIMARY KEY,
+    country TEXT NOT NULL,
+    status_2017 TEXT,
+    mw_2017 REAL,
+    status_2023 TEXT,
+    mw_2023 REAL
+);
+CREATE VIEW country_capacity AS
+SELECT
+    country AS name,
+    SUM(CASE WHEN status_2017 = 'operating' THEN mw_2017 ELSE 0 END) AS mw_2017,
+    SUM(CASE WHEN status_2023 = 'operating' THEN mw_2023 ELSE 0 END) AS mw_2023
+FROM units
+GROUP BY country;
+"""
+
 
 class UnknownCountryError(ValueError):
     pass
+
+
+@dataclass
+class Unit:
+    tracker_id: str
+    country: str
+    status_2017: str | None = None
+    mw_2017: float | None = None
+    status_2023: str | None = None
+    mw_2023: float | None = None
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -36,39 +65,61 @@ def parse_mw(value: str) -> float | None:
         return None
 
 
-def operating_by_country(rows: list[dict[str, str]]) -> dict[str, float]:
-    totals: dict[str, float] = defaultdict(float)
+def clean_2017(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], Counter[str]]:
+    kept, seen, discarded = [], set(), Counter()
     for row in rows:
-        mw = parse_mw(row["Capacity (MW)"])
-        if mw is not None and row["Status"].lower() == "operating":
-            totals[row["Country"]] += mw
-    return totals
+        if not row["Status"] or parse_mw(row["Capacity (MW)"]) is None:
+            discarded["empty status or capacity"] += 1
+        elif not row["Tracker ID"]:
+            discarded["empty Tracker ID"] += 1
+        elif row["Tracker ID"] in seen:
+            discarded["duplicate Tracker ID"] += 1
+        else:
+            seen.add(row["Tracker ID"])
+            kept.append(row)
+    return kept, discarded
 
 
 def normalize_2017_countries(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]]) -> None:
     known = {row["Country"] for row in rows_2023} | COUNTRIES_ONLY_2017
     for row in rows_2017:
-        if not row["Country"]:
-            continue
         row["Country"] = COUNTRY_NAMES_2017.get(row["Country"], row["Country"])
         if row["Country"] not in known:
             raise UnknownCountryError(f"Unknown 2017 country: {row['Country']}")
 
 
-def build(csv_2017: Path, csv_2023: Path, db_path: Path) -> None:
-    rows_2017, rows_2023 = read_rows(csv_2017), read_rows(csv_2023)
+def merge_units(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]]) -> dict[str, Unit]:
+    units = {
+        row["Tracker ID"]: Unit(
+            row["Tracker ID"], row["Country"], row["Status"].lower(), parse_mw(row["Capacity (MW)"])
+        )
+        for row in rows_2017
+    }
+    for row in rows_2023:
+        unit = units.setdefault(row["Tracker ID"], Unit(row["Tracker ID"], row["Country"]))
+        unit.country = row["Country"]
+        unit.status_2023 = row["Status"].lower()
+        unit.mw_2023 = parse_mw(row["Capacity (MW)"])
+    return units
+
+
+def build(csv_2017: Path, csv_2023: Path, db_path: Path) -> Counter[str]:
+    rows_2017, discarded = clean_2017(read_rows(csv_2017))
+    rows_2023 = read_rows(csv_2023)
     normalize_2017_countries(rows_2017, rows_2023)
-    mw_2017 = operating_by_country(rows_2017)
-    mw_2023 = operating_by_country(rows_2023)
+    units = merge_units(rows_2017, rows_2023)
     db_path.unlink(missing_ok=True)
     with sqlite3.connect(db_path) as conn:
-        conn.execute("CREATE TABLE country_capacity (name TEXT PRIMARY KEY, mw_2017 REAL, mw_2023 REAL)")
+        conn.executescript(SCHEMA)
         conn.executemany(
-            "INSERT INTO country_capacity VALUES (?, ?, ?)",
-            [(name, mw_2017.get(name, 0.0), mw_2023.get(name, 0.0)) for name in mw_2017.keys() | mw_2023.keys()],
+            "INSERT INTO units VALUES (?, ?, ?, ?, ?, ?)",
+            [(u.tracker_id, u.country, u.status_2017, u.mw_2017, u.status_2023, u.mw_2023) for u in units.values()],
         )
+    return discarded
 
 
 if __name__ == "__main__":
-    build(CSV_2017, CSV_2023, DB_PATH)
+    discarded = build(CSV_2017, CSV_2023, DB_PATH)
+    for reason, count in discarded.items():
+        print(f"Discarded 2017 rows ({reason}): {count}", file=sys.stderr)
     print(f"Wrote {DB_PATH}", file=sys.stderr)
