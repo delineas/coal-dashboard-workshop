@@ -1,6 +1,8 @@
 import type { PlantSummary } from '../api/countries'
 import { formatMw, formatSignedMw } from '../format'
+import { changeOrder } from '../change'
 import Card from './Card'
+import ChangeBadge from './ChangeBadge'
 import SortableTable, { type Column } from './SortableTable'
 
 const columns: Column<PlantSummary>[] = [
@@ -23,6 +25,12 @@ const columns: Column<PlantSummary>[] = [
     align: 'right',
     sortValue: (p) => p.cmp23 - p.cmp17,
     render: (p) => formatSignedMw(p.cmp23 - p.cmp17),
+  },
+  {
+    key: 'change',
+    label: 'Change',
+    sortValue: (p) => changeOrder.indexOf(p.change),
+    render: (p) => <ChangeBadge change={p.change} />,
   },
 ]
 

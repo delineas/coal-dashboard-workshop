@@ -1,3 +1,5 @@
+import type { Change } from '../change'
+
 export type Trend = 'up' | 'down' | 'flat'
 
 export interface Country {
@@ -30,6 +32,7 @@ export interface PlantSummary {
   mw23: number
   cmp17: number
   cmp23: number
+  change: Change
 }
 
 export interface CountryDetail extends Country {

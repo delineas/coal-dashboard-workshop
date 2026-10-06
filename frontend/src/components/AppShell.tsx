@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
+import ChangeLegend from './ChangeLegend'
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -45,9 +46,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               Overview
             </NavLink>
           </nav>
-          <p className="mt-6 border-t border-zinc-100 pt-4 text-[11px] text-zinc-400 lg:mt-auto">
-            Data: GEM, Jan 2017 and July 2023
-          </p>
+          <div className="mt-6 border-t border-zinc-100 pt-4 lg:mt-auto">
+            <ChangeLegend />
+            <p className="mt-4 text-[11px] text-zinc-400">Data: GEM, Jan 2017 and July 2023</p>
+          </div>
         </div>
       </aside>
       <main className="max-w-[1400px] min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</main>
