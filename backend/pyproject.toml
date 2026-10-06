@@ -1,7 +1,7 @@
 [project]
-name = "basecamp-tool-backend"
+name = "coal-dashboard-backend"
 version = "1.0.0"
-description = "FastAPI backend for basecamp-tool"
+description = "FastAPI backend for the coal dashboard"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",

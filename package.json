@@ -1,5 +1,5 @@
 {
-  "name": "basecamp-tool",
+  "name": "coal-dashboard",
   "private": true,
   "scripts": {
     "moon": "moon"

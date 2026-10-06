@@ -1,8 +1,12 @@
-# basecamp-tool
+# coal-dashboard
 
-Empty starting point for a training exercise. The stack is connected end to end
-and has no features: React + Tailwind frontend, FastAPI backend, SQLite database.
-The page calls `GET /api/hello` and shows "Hello world".
+The dashboard compares operating coal capacity by country in 2017 and in 2023, with the details and a map of each plant. The data is the Global Coal Plant Tracker from Global Energy Monitor (GEM).
+
+- Spec: [`docs/spec.md`](docs/spec.md)
+- Plan: [`docs/plan.md`](docs/plan.md)
+- Decisions: [`docs/decisions/`](docs/decisions/)
+
+Stack: React + Tailwind frontend, FastAPI backend, SQLite database. The stack started as a copy of `basecamp-tool`.
 
 ## Setup
 
@@ -18,10 +22,15 @@ Frontend and workspace tools (Node 20.19+, required by Vite 8):
 
 ## Monorepo
 
-The repository is a [moon](https://moonrepo.dev) workspace with two projects:
-`backend` and `frontend`. The workspace config is in `.moon/workspace.yml`. Each
-project declares its tasks in its own `moon.yml`. Moon caches task results and
-runs only what changed.
+The repository is a [moon](https://moonrepo.dev) workspace with two projects: `backend` and `frontend`. The workspace config is in `.moon/workspace.yml`. Each project declares its tasks in its own `moon.yml`.
+
+## Data
+
+The ETL reads `data/*.csv` and writes `backend/coal.sqlite`. Git ignores the database file.
+
+    npx moon run backend:etl
+
+The tasks `backend:dev` and `backend:test` run the ETL first.
 
 ## Run
 
