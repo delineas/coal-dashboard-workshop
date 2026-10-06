@@ -21,3 +21,17 @@ export function countryApi(name: string): string {
 export function countryPath(name: string): string {
   return `/country/${encodeURIComponent(name)}`
 }
+
+export interface PlantSummary {
+  id: string
+  name: string
+  subnational_unit: string
+  mw17: number
+  mw23: number
+  cmp17: number
+  cmp23: number
+}
+
+export interface CountryDetail extends Country {
+  plants: PlantSummary[]
+}

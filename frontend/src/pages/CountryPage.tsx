@@ -1,13 +1,14 @@
 import { useParams } from 'react-router'
-import { countryApi, type Country } from '../api/countries'
+import { countryApi, type CountryDetail } from '../api/countries'
 import Breadcrumb from '../components/Breadcrumb'
 import KpiTiles from '../components/KpiTiles'
 import { LoadError, Loading, NotFound } from '../components/PageStatus'
+import PlantTable from '../components/PlantTable'
 import { useApi } from '../useApi'
 
 export default function CountryPage() {
   const name = useParams().name ?? ''
-  const country = useApi<Country>(countryApi(name))
+  const country = useApi<CountryDetail>(countryApi(name))
 
   if (country.status === 'not-found') return <NotFound />
 
@@ -18,7 +19,12 @@ export default function CountryPage() {
       <div className="mt-6 space-y-6">
         {country.status === 'loading' && <Loading />}
         {country.status === 'error' && <LoadError message={country.message} />}
-        {country.status === 'ok' && <KpiTiles countries={[country.data]} />}
+        {country.status === 'ok' && (
+          <>
+            <KpiTiles countries={[country.data]} />
+            <PlantTable plants={country.data.plants} />
+          </>
+        )}
       </div>
     </>
   )
