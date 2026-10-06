@@ -400,12 +400,7 @@ The plant change compares `cmp17` and `cmp23` exactly:
 
 ## 9. Delivery
 
-- Branches, in this sequence:
-  1. `feature/app-scaffold`
-  2. `feature/data-etl`
-  3. `feature/country-comparison`
-  4. `feature/plant-map`
-  5. `feature/plant-detail`
+- [`docs/plan.md`](plan.md) gives the steps and their branches. Step 1 is a walking skeleton.
 - After user approval, merge each branch into `main` with `--no-ff`.
 - Small atomic commits, Conventional Commits, no signature lines.
 
