@@ -26,7 +26,7 @@ def country_rows(conn):
 
 def test_operating_capacity_by_country(conn):
     assert country_rows(conn) == {
-        "Atlantis": (100, 100),
+        "Atlantis": (540, 300),
         "Lemuria": (1200, 0),
         "Mu": (70, 395),
         "Türkiye": (80, 80),
@@ -86,3 +86,30 @@ def test_country_change_uses_comparable_units(conn):
 
 def test_pct_change_uses_comparable_2017_capacity(conn):
     assert conn.execute("SELECT pct_change FROM country_capacity WHERE name = 'Mu'").fetchone()[0] == pytest.approx(428.57, 0.01)
+
+
+def plant_of(conn, tracker_id):
+    return conn.execute("SELECT plant_id FROM units WHERE tracker_id = ?", (tracker_id,)).fetchone()[0]
+
+
+def test_2023_unit_belongs_to_its_location(conn):
+    assert plant_of(conn, "G4") == "L3"
+
+
+def test_2017_only_unit_joins_the_plant_of_a_sibling_unit(conn):
+    assert plant_of(conn, "G11") == "L7"
+
+
+def test_2017_only_unit_without_sibling_gets_a_stable_synthetic_plant(tmp_path):
+    plant_ids = []
+    for name in ("first.sqlite", "second.sqlite"):
+        etl.build(FIXTURES / "units_2017.csv", FIXTURES / "units_2023.csv", tmp_path / name)
+        with sqlite3.connect(tmp_path / name) as connection:
+            plant_ids.append(plant_of(connection, "G12"))
+    assert plant_ids[0].startswith("L17-")
+    assert plant_ids[0] == plant_ids[1]
+
+
+def test_plant_record_and_capacity(conn):
+    kappa = conn.execute("SELECT name, country, owner, lat, mw17, mw23, cmp17, cmp23 FROM plant_capacity WHERE id = 'L7'").fetchone()
+    assert kappa == ("Kappa", "Atlantis", "Owner K", 11, 350, 200, 200, 200)

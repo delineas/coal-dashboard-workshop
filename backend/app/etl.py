@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import sqlite3
 import sys
 from collections import Counter
@@ -21,8 +22,20 @@ COUNTRY_NAMES_2017 = {
 COUNTRIES_ONLY_2017 = {"Jordan", "Reunion"}
 
 SCHEMA = """
+CREATE TABLE plants (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    country TEXT NOT NULL,
+    subnational_unit TEXT,
+    owner TEXT,
+    parent TEXT,
+    lat REAL,
+    lon REAL,
+    wiki_url TEXT
+);
 CREATE TABLE units (
     tracker_id TEXT PRIMARY KEY,
+    plant_id TEXT NOT NULL REFERENCES plants (id),
     country TEXT NOT NULL,
     status_2017 TEXT,
     mw_2017 REAL,
@@ -50,6 +63,15 @@ SELECT
     CASE WHEN cmp_2017 > 0 THEN (cmp_2023 - cmp_2017) * 100.0 / cmp_2017 END AS pct_change,
     CASE WHEN cmp_2023 > cmp_2017 THEN 'up' WHEN cmp_2023 < cmp_2017 THEN 'down' ELSE 'flat' END AS trend
 FROM country_totals;
+CREATE VIEW plant_capacity AS
+SELECT
+    plants.*,
+    SUM(op_2017) AS mw17,
+    SUM(op_2023) AS mw23,
+    SUM(op_2017 * comparable) AS cmp17,
+    SUM(op_2023 * comparable) AS cmp23
+FROM plants JOIN units ON units.plant_id = plants.id
+GROUP BY plants.id;
 """
 
 
@@ -58,8 +80,50 @@ class UnknownCountryError(ValueError):
 
 
 @dataclass
+class Plant:
+    id: str
+    name: str
+    country: str
+    subnational_unit: str
+    owner: str
+    parent: str
+    lat: float | None
+    lon: float | None
+    wiki_url: str
+
+    @classmethod
+    def from_2023(cls, row: dict[str, str]) -> "Plant":
+        return cls(
+            row["GEM location ID"],
+            row["Plant "],
+            row["Country"],
+            row["Subnational unit (province, state)"],
+            row["Owner"],
+            row["Parent"],
+            parse_float(row["Latitude"]),
+            parse_float(row["Longitude"]),
+            row["Wiki URL"],
+        )
+
+    @classmethod
+    def from_2017(cls, plant_id: str, row: dict[str, str]) -> "Plant":
+        return cls(
+            plant_id,
+            row["Plant"],
+            row["Country"],
+            row["Subnational unit"],
+            row["Owner"],
+            row["Parent"],
+            parse_float(row["Latitude"]),
+            parse_float(row["Longitude"]),
+            row["Wiki page"],
+        )
+
+
+@dataclass
 class Unit:
     tracker_id: str
+    plant_id: str
     country: str
     status_2017: str | None = None
     mw_2017: float | None = None
@@ -79,7 +143,7 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(fh))
 
 
-def parse_mw(value: str) -> float | None:
+def parse_float(value: str) -> float | None:
     try:
         return float(value.replace(",", ""))
     except ValueError:
@@ -89,7 +153,7 @@ def parse_mw(value: str) -> float | None:
 def clean_2017(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], Counter[str]]:
     kept, seen, discarded = [], set(), Counter()
     for row in rows:
-        if not row["Status"] or parse_mw(row["Capacity (MW)"]) is None:
+        if not row["Status"] or parse_float(row["Capacity (MW)"]) is None:
             discarded["empty status or capacity"] += 1
         elif not row["Tracker ID"]:
             discarded["empty Tracker ID"] += 1
@@ -109,18 +173,50 @@ def normalize_2017_countries(rows_2017: list[dict[str, str]], rows_2023: list[di
             raise UnknownCountryError(f"Unknown 2017 country: {row['Country']}")
 
 
-def merge_units(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]]) -> dict[str, Unit]:
+def synthetic_plant_id(plant: str, country: str) -> str:
+    return "L17-" + hashlib.sha1(f"{plant}|{country}".encode()).hexdigest()[:8]
+
+
+def build_plants(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]]) -> tuple[dict[str, Plant], dict[str, str]]:
+    plants: dict[str, Plant] = {}
+    plant_of_unit: dict[str, str] = {}
+    for row in rows_2023:
+        plants.setdefault(row["GEM location ID"], Plant.from_2023(row))
+        plant_of_unit[row["Tracker ID"]] = row["GEM location ID"]
+
+    sibling_plants: dict[tuple[str, str], set[str]] = {}
+    for row in rows_2017:
+        if row["Tracker ID"] in plant_of_unit:
+            sibling_plants.setdefault((row["Plant"], row["Country"]), set()).add(plant_of_unit[row["Tracker ID"]])
+
+    for row in rows_2017:
+        if row["Tracker ID"] in plant_of_unit:
+            continue
+        key = (row["Plant"], row["Country"])
+        plant_id = min(sibling_plants[key]) if key in sibling_plants else synthetic_plant_id(*key)
+        plants.setdefault(plant_id, Plant.from_2017(plant_id, row))
+        plant_of_unit[row["Tracker ID"]] = plant_id
+    return plants, plant_of_unit
+
+
+def merge_units(
+    rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]], plant_of_unit: dict[str, str]
+) -> dict[str, Unit]:
     units = {
         row["Tracker ID"]: Unit(
-            row["Tracker ID"], row["Country"], row["Status"].lower(), parse_mw(row["Capacity (MW)"])
+            row["Tracker ID"],
+            plant_of_unit[row["Tracker ID"]],
+            row["Country"],
+            row["Status"].lower(),
+            parse_float(row["Capacity (MW)"]),
         )
         for row in rows_2017
     }
     for row in rows_2023:
-        unit = units.setdefault(row["Tracker ID"], Unit(row["Tracker ID"], row["Country"]))
+        unit = units.setdefault(row["Tracker ID"], Unit(row["Tracker ID"], row["GEM location ID"], row["Country"]))
         unit.country = row["Country"]
         unit.status_2023 = row["Status"].lower()
-        unit.mw_2023 = parse_mw(row["Capacity (MW)"])
+        unit.mw_2023 = parse_float(row["Capacity (MW)"])
         unit.start_year = int(row["Start year"]) if row["Start year"] else None
     return units
 
@@ -129,15 +225,33 @@ def build(csv_2017: Path, csv_2023: Path, db_path: Path) -> Counter[str]:
     rows_2017, discarded = clean_2017(read_rows(csv_2017))
     rows_2023 = read_rows(csv_2023)
     normalize_2017_countries(rows_2017, rows_2023)
-    units = merge_units(rows_2017, rows_2023)
+    plants, plant_of_unit = build_plants(rows_2017, rows_2023)
+    units = merge_units(rows_2017, rows_2023, plant_of_unit)
     db_path.unlink(missing_ok=True)
     with sqlite3.connect(db_path) as conn:
         conn.executescript(SCHEMA)
         conn.executemany(
-            "INSERT INTO units (tracker_id, country, status_2017, mw_2017, status_2023, mw_2023, start_year, comparable)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO plants VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
-                (u.tracker_id, u.country, u.status_2017, u.mw_2017, u.status_2023, u.mw_2023, u.start_year, u.comparable)
+                (p.id, p.name, p.country, p.subnational_unit, p.owner, p.parent, p.lat, p.lon, p.wiki_url)
+                for p in plants.values()
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO units (tracker_id, plant_id, country, status_2017, mw_2017, status_2023, mw_2023,"
+            " start_year, comparable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    u.tracker_id,
+                    u.plant_id,
+                    u.country,
+                    u.status_2017,
+                    u.mw_2017,
+                    u.status_2023,
+                    u.mw_2023,
+                    u.start_year,
+                    u.comparable,
+                )
                 for u in units.values()
             ],
         )

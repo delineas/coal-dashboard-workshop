@@ -68,7 +68,16 @@ def test_pct_change_is_null_without_comparable_2017_capacity():
 def test_country_detail():
     response = client.get("/api/countries/Türkiye")
     assert response.status_code == 200
-    assert response.json() == countries_by_name()["Türkiye"]
+    detail = response.json()
+    assert {k: v for k, v in detail.items() if k != "plants"} == countries_by_name()["Türkiye"]
+
+
+def test_country_plants_add_up_to_the_country_totals():
+    india = client.get("/api/countries/India").json()
+    assert sum(p["mw17"] for p in india["plants"]) == india["mw_2017"]
+    assert sum(p["mw23"] for p in india["plants"]) == india["mw_2023"]
+    assert sum(p["cmp23"] - p["cmp17"] for p in india["plants"]) == india["delta_mw"]
+    assert all(p["mw17"] > 0 or p["mw23"] > 0 for p in india["plants"])
 
 
 def test_unknown_country_returns_404():
