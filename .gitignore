@@ -1,0 +1,27 @@
+# System and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+
+# Agent work documents
+.scratchpad/
+.claude/worktrees/
+
+# Dependencies and build output
+node_modules/
+dist/
+.venv/
+__pycache__/
+
+# Generated databases and logs
+*.sqlite
+*.db
+*.log
