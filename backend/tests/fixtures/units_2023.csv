@@ -1,0 +1,5 @@
+Tracker ID,GEM location ID,Unit,Plant ,Capacity (MW),Status,Start year,Country,Latitude,Longitude
+G1,L1,Unit 1,Alpha,100,operating,1990,Atlantis,10,20
+G2,L1,Unit 2,Alpha,50,retired,1985,Atlantis,10,20
+G3,L2,Unit 1,Beta,"1,200",retired,1980,Lemuria,30,40
+G4,L3,Unit 1,Gamma,300,operating,2020,Mu,50,60
