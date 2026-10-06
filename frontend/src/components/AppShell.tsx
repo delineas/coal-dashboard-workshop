@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
 import ChangeLegend from './ChangeLegend'
+import CountrySearch from './CountrySearch'
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -46,6 +47,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
               Overview
             </NavLink>
           </nav>
+          <div className="mt-6">
+            <CountrySearch onNavigate={() => setMenuOpen(false)} />
+          </div>
           <div className="mt-6 border-t border-zinc-100 pt-4 lg:mt-auto">
             <ChangeLegend />
             <p className="mt-4 text-[11px] text-zinc-400">Data: GEM, Jan 2017 and July 2023</p>
