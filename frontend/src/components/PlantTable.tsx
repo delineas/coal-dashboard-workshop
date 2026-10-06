@@ -1,4 +1,6 @@
+import { Link } from 'react-router'
 import type { PlantSummary } from '../api/countries'
+import { plantPath } from '../api/plants'
 import { formatMw, formatSignedMw } from '../format'
 import { changeOrder } from '../change'
 import Card from './Card'
@@ -12,7 +14,9 @@ const columns: Column<PlantSummary>[] = [
     sortValue: (p) => p.name,
     render: (p) => (
       <>
-        <span className="font-medium text-zinc-900">{p.name}</span>
+        <Link to={plantPath(p.id)} className="font-medium text-zinc-900 hover:text-brand-600">
+          {p.name}
+        </Link>
         {p.subnational_unit && <span className="block text-xs text-zinc-500">{p.subnational_unit}</span>}
       </>
     ),
@@ -36,7 +40,7 @@ const columns: Column<PlantSummary>[] = [
 
 export default function PlantTable({ plants }: { plants: PlantSummary[] }) {
   return (
-    <Card title="Plants" subtitle={`${plants.length.toLocaleString('en-US')} plants. Click a column to sort.`}>
+    <Card title="Plants" subtitle={`${plants.length.toLocaleString('en-US')} plants. Click a column to sort. Click a plant to see its units.`}>
       <SortableTable columns={columns} rows={plants} rowKey={(p) => p.id} />
     </Card>
   )
