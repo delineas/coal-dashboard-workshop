@@ -82,3 +82,14 @@ def test_country_plants_add_up_to_the_country_totals():
 
 def test_unknown_country_returns_404():
     assert client.get("/api/countries/Atlantis").status_code == 404
+
+
+def test_country_plants_have_a_change():
+    india = client.get("/api/countries/India").json()
+    assert all(p["change"] in {"new", "retired", "grew", "shrank", "unchanged", "coverage"} for p in india["plants"])
+
+
+def test_plant_with_coverage_change_only():
+    kazakhstan = client.get("/api/countries/Kazakhstan").json()
+    stepnogorsk = next(p for p in kazakhstan["plants"] if p["id"] == "L104985")
+    assert stepnogorsk["change"] == "coverage"

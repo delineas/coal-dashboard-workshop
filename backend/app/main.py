@@ -6,9 +6,9 @@ app = FastAPI(title="Coal Dashboard", version="0.1.0")
 
 COUNTRY_SQL = "SELECT * FROM country_capacity WHERE (mw_2017 > 0 OR mw_2023 > 0)"
 COUNTRY_PLANTS_SQL = """
-SELECT id, name, subnational_unit, mw17, mw23, cmp17, cmp23
+SELECT id, name, subnational_unit, mw17, mw23, cmp17, cmp23, change
 FROM plant_capacity
-WHERE country = ? AND (mw17 > 0 OR mw23 > 0)
+WHERE country = ? AND change IS NOT NULL
 ORDER BY mw23 DESC, mw17 DESC
 """
 

@@ -63,7 +63,7 @@ SELECT
     CASE WHEN cmp_2017 > 0 THEN (cmp_2023 - cmp_2017) * 100.0 / cmp_2017 END AS pct_change,
     CASE WHEN cmp_2023 > cmp_2017 THEN 'up' WHEN cmp_2023 < cmp_2017 THEN 'down' ELSE 'flat' END AS trend
 FROM country_totals;
-CREATE VIEW plant_capacity AS
+CREATE VIEW plant_totals AS
 SELECT
     plants.*,
     SUM(op_2017) AS mw17,
@@ -72,6 +72,19 @@ SELECT
     SUM(op_2023 * comparable) AS cmp23
 FROM plants JOIN units ON units.plant_id = plants.id
 GROUP BY plants.id;
+CREATE VIEW plant_capacity AS
+SELECT
+    *,
+    CASE
+        WHEN mw17 = 0 AND mw23 = 0 THEN NULL
+        WHEN cmp17 = 0 AND cmp23 = 0 THEN 'coverage'
+        WHEN cmp17 = 0 THEN 'new'
+        WHEN cmp23 = 0 THEN 'retired'
+        WHEN cmp23 > cmp17 THEN 'grew'
+        WHEN cmp23 < cmp17 THEN 'shrank'
+        ELSE 'unchanged'
+    END AS change
+FROM plant_totals;
 """
 
 

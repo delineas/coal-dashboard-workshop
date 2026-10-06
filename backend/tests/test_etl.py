@@ -113,3 +113,19 @@ def test_2017_only_unit_without_sibling_gets_a_stable_synthetic_plant(tmp_path):
 def test_plant_record_and_capacity(conn):
     kappa = conn.execute("SELECT name, country, owner, lat, mw17, mw23, cmp17, cmp23 FROM plant_capacity WHERE id = 'L7'").fetchone()
     assert kappa == ("Kappa", "Atlantis", "Owner K", 11, 350, 200, 200, 200)
+
+
+@pytest.mark.parametrize(
+    ("plant_id", "change"),
+    [("L3", "new"), ("L2", "retired"), ("L1", "unchanged"), ("L6", "coverage"), ("L5", "unchanged")],
+)
+def test_plant_change(conn, plant_id, change):
+    assert conn.execute("SELECT change FROM plant_capacity WHERE id = ?", (plant_id,)).fetchone()[0] == change
+
+
+def test_plant_change_grew_and_shrank(tmp_path):
+    db_path = tmp_path / "coal.sqlite"
+    etl.build(FIXTURES / "units_2017_resized.csv", FIXTURES / "units_2023.csv", db_path)
+    with sqlite3.connect(db_path) as connection:
+        changes = dict(connection.execute("SELECT id, change FROM plant_capacity WHERE id IN ('L1', 'L7')"))
+    assert changes == {"L1": "grew", "L7": "shrank"}
