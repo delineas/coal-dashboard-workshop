@@ -1,10 +1,10 @@
 import 'leaflet/dist/leaflet.css'
 import { latLngBounds } from 'leaflet'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet'
 import { Link } from 'react-router'
 import { plantPath, type MapPlant } from '../api/plants'
-import { changes } from '../change'
+import { changes, type Change } from '../change'
 import { formatMw } from '../format'
 import ChangeLegend from './ChangeLegend'
 
@@ -23,6 +23,37 @@ function FitToPlants({ plants }: { plants: MapPlant[] }) {
   return null
 }
 
+function pathOptions(change: Change | null) {
+  const colors = change ? changes[change] : { fill: '#4f46e5', stroke: '#4f46e5' }
+  return { color: colors.stroke, fillColor: colors.fill, fillOpacity: 0.85, weight: 1 }
+}
+
+function BaseMap({ center, zoom, children }: { center: [number, number]; zoom: number; children: ReactNode }) {
+  return (
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      minZoom={2}
+      preferCanvas
+      scrollWheelZoom={false}
+      className="h-full w-full rounded-b-xl bg-zinc-100"
+    >
+      <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={16} />
+      {children}
+    </MapContainer>
+  )
+}
+
+export function PlantLocationMap({ lat, lon, mw, change }: { lat: number; lon: number; mw: number; change: Change | null }) {
+  return (
+    <div style={{ height: 260 }}>
+      <BaseMap center={[lat, lon]} zoom={8}>
+        <CircleMarker center={[lat, lon]} radius={Math.max(6, radius(mw))} pathOptions={pathOptions(change)} />
+      </BaseMap>
+    </div>
+  )
+}
+
 export default function PlantMap({
   plants,
   height,
@@ -34,27 +65,14 @@ export default function PlantMap({
 }) {
   return (
     <div className="relative" style={{ height }}>
-      <MapContainer
-        center={[25, 60]}
-        zoom={2}
-        minZoom={2}
-        preferCanvas
-        scrollWheelZoom={false}
-        className="h-full w-full rounded-b-xl bg-zinc-100"
-      >
-        <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={16} />
+      <BaseMap center={[25, 60]} zoom={2}>
         {fitToPlants && <FitToPlants plants={plants} />}
         {plants.map((p) => (
           <CircleMarker
             key={p.id}
             center={[p.lat, p.lon]}
             radius={radius(Math.max(p.mw17, p.mw23))}
-            pathOptions={{
-              color: changes[p.change].stroke,
-              fillColor: changes[p.change].fill,
-              fillOpacity: 0.85,
-              weight: 1,
-            }}
+            pathOptions={pathOptions(p.change)}
           >
             <Popup>
               <p className="font-semibold text-zinc-900">{p.name}</p>
@@ -67,7 +85,7 @@ export default function PlantMap({
             </Popup>
           </CircleMarker>
         ))}
-      </MapContainer>
+      </BaseMap>
       <div className="pointer-events-none absolute bottom-6 left-2 z-[400] rounded-md bg-white/90 px-3 py-2 shadow-sm">
         <ChangeLegend />
       </div>
