@@ -1,5 +1,6 @@
 import type { Country } from '../api/countries'
 import { formatMw, formatPctChange, formatSignedMw, trendSymbol } from '../format'
+import Card from './Card'
 import SortableTable, { type Column } from './SortableTable'
 
 const columns: Column<Country>[] = [
@@ -25,5 +26,9 @@ const columns: Column<Country>[] = [
 ]
 
 export default function CountryTable({ countries }: { countries: Country[] }) {
-  return <SortableTable columns={columns} rows={countries} rowKey={(c) => c.name} />
+  return (
+    <Card title="Countries" subtitle="Click a column to sort.">
+      <SortableTable columns={columns} rows={countries} rowKey={(c) => c.name} />
+    </Card>
+  )
 }

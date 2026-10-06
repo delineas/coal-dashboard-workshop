@@ -1,5 +1,6 @@
 import type { Country } from '../api/countries'
 import { formatGw, formatPctChange, formatSignedGw } from '../format'
+import Card from './Card'
 
 function sum(countries: Country[], key: keyof Omit<Country, 'name' | 'pct_change' | 'trend'>): number {
   return countries.reduce((total, c) => total + c[key], 0)
@@ -7,11 +8,13 @@ function sum(countries: Country[], key: keyof Omit<Country, 'name' | 'pct_change
 
 function Tile({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div className="rounded-lg border border-gray-200 p-4">
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-      {detail && <p className="mt-0.5 text-sm text-gray-500 tabular-nums">{detail}</p>}
-    </div>
+    <Card>
+      <div className="p-4 sm:p-5">
+        <p className="text-xs font-medium text-zinc-500">{label}</p>
+        <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+        {detail && <p className="mt-0.5 text-sm text-zinc-500 tabular-nums">{detail}</p>}
+      </div>
+    </Card>
   )
 }
 
@@ -22,7 +25,7 @@ export default function KpiTiles({ countries }: { countries: Country[] }) {
 
   return (
     <section>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <Tile label="Operating 2017" value={formatGw(sum(countries, 'mw_2017'))} />
         <Tile label="Operating 2023" value={formatGw(sum(countries, 'mw_2023'))} />
         <Tile
@@ -32,7 +35,7 @@ export default function KpiTiles({ countries }: { countries: Country[] }) {
         />
         <Tile label="Tracker coverage change" value={formatSignedGw(sum(countries, 'coverage_mw'))} />
       </div>
-      <p className="mt-2 text-sm text-gray-500">
+      <p className="mt-2 text-xs text-zinc-500">
         Δ compares only units that both releases can compare. Coverage shows units that GEM added to or removed from
         the tracker.
       </p>

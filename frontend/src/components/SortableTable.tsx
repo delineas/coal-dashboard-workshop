@@ -45,19 +45,19 @@ export default function SortableTable<T>({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="max-h-[560px] overflow-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b text-gray-500">
+          <tr className="text-zinc-500">
             {columns.map((column) => {
               const active = sort?.key === column.key
               return (
                 <th
                   key={column.key}
                   aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                  className={`py-2 font-medium whitespace-nowrap ${alignClass[column.align ?? 'left']}`}
+                  className={`sticky top-0 border-b border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs font-medium whitespace-nowrap sm:px-4 ${alignClass[column.align ?? 'left']}`}
                 >
-                  <button type="button" onClick={() => toggle(column)} className="hover:text-gray-900">
+                  <button type="button" onClick={() => toggle(column)} className="hover:text-zinc-900">
                     {column.label}
                     <span className="ml-1 inline-block w-2">{active ? (sort.direction === 'asc' ? '▲' : '▼') : ''}</span>
                   </button>
@@ -68,11 +68,11 @@ export default function SortableTable<T>({
         </thead>
         <tbody>
           {sortedRows.map((row) => (
-            <tr key={rowKey(row)} className="border-b border-gray-100">
+            <tr key={rowKey(row)} className="border-b border-zinc-100 hover:bg-zinc-50/60">
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className={`py-1.5 whitespace-nowrap tabular-nums ${alignClass[column.align ?? 'left']}`}
+                  className={`px-3 py-2 whitespace-nowrap tabular-nums sm:px-4 ${alignClass[column.align ?? 'left']}`}
                 >
                   {column.render(row)}
                 </td>
