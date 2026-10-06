@@ -11,13 +11,13 @@ This plan implements [`docs/spec.md`](spec.md). It replaces the branch list in s
 
 ## 2. Rules for each step
 
-- One step = one branch `feature/<step-name>`, from `main`.
+- All steps use one branch, `feature/coal-dashboard`, from `main`. (This replaces the earlier rule of one branch for each step.) The branch names in section 5 are step names only.
 - Small atomic commits, Conventional Commits, no signature lines.
 - Before the merge, all these checks pass:
   - `npx moon run :test :lint :build` (AC-GEN-2).
   - The "Test at the end" list of the step.
   - From step 7: no horizontal scroll at 390 px on all routes that exist (AC-GEN-1).
-- After user approval, merge into `main` with `--no-ff`.
+- Each step ends with a commit that the checks pass on. After user approval, merge the branch into `main` with `--no-ff` at the end.
 
 ## 3. Decisions for this plan
 

@@ -400,7 +400,7 @@ The plant change compares `cmp17` and `cmp23` exactly:
 
 ## 9. Delivery
 
-- [`docs/plan.md`](plan.md) gives the steps and their branches. Step 1 is a walking skeleton.
+- [`docs/plan.md`](plan.md) gives the steps. Step 1 is a walking skeleton. All steps use one branch.
 - After user approval, merge each branch into `main` with `--no-ff`.
 - Small atomic commits, Conventional Commits, no signature lines.
 
