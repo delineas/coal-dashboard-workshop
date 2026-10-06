@@ -123,3 +123,11 @@ def test_plant_without_coordinates_is_not_on_the_map():
         "SELECT id FROM plant_capacity WHERE change IS NOT NULL AND lat IS NULL ORDER BY id LIMIT 1"
     )["id"]
     assert without_coordinates not in {p["id"] for p in client.get("/api/plants/map").json()}
+
+
+def test_map_country_filter():
+    india = client.get("/api/plants/map", params={"country": "India"}).json()
+    india_ids = {p["id"] for p in client.get("/api/countries/India").json()["plants"]}
+    assert india
+    assert {p["id"] for p in india} <= india_ids
+    assert all(p["lat"] is not None and p["change"] is not None for p in india)
