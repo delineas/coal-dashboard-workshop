@@ -1,5 +1,7 @@
 import 'leaflet/dist/leaflet.css'
-import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
+import { latLngBounds } from 'leaflet'
+import { useEffect } from 'react'
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet'
 import { Link } from 'react-router'
 import { plantPath, type MapPlant } from '../api/plants'
 import { changes } from '../change'
@@ -13,7 +15,23 @@ function radius(mw: number): number {
   return 2 + Math.sqrt(mw) / 6
 }
 
-export default function PlantMap({ plants, height }: { plants: MapPlant[]; height: string }) {
+function FitToPlants({ plants }: { plants: MapPlant[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (plants.length > 0) map.fitBounds(latLngBounds(plants.map((p) => [p.lat, p.lon])), { padding: [24, 24], maxZoom: 9 })
+  }, [map, plants])
+  return null
+}
+
+export default function PlantMap({
+  plants,
+  height,
+  fitToPlants = false,
+}: {
+  plants: MapPlant[]
+  height: string
+  fitToPlants?: boolean
+}) {
   return (
     <div className="relative" style={{ height }}>
       <MapContainer
@@ -25,6 +43,7 @@ export default function PlantMap({ plants, height }: { plants: MapPlant[]; heigh
         className="h-full w-full rounded-b-xl bg-zinc-100"
       >
         <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={16} />
+        {fitToPlants && <FitToPlants plants={plants} />}
         {plants.map((p) => (
           <CircleMarker
             key={p.id}

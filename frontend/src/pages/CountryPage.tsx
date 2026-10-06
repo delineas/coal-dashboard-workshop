@@ -1,8 +1,10 @@
 import { useParams } from 'react-router'
 import { countryApi, type CountryDetail } from '../api/countries'
+import { countryMapPlantsApi } from '../api/plants'
 import Breadcrumb from '../components/Breadcrumb'
 import KpiTiles from '../components/KpiTiles'
 import { LoadError, Loading, NotFound } from '../components/PageStatus'
+import PlantMapCard from '../components/PlantMapCard'
 import PlantTable from '../components/PlantTable'
 import { useApi } from '../useApi'
 
@@ -22,6 +24,13 @@ export default function CountryPage() {
         {country.status === 'ok' && (
           <>
             <KpiTiles countries={[country.data]} />
+            <PlantMapCard
+              api={countryMapPlantsApi(name)}
+              title={`Plants in ${name}`}
+              subtitle="The map zooms to the plants of this country."
+              height="clamp(300px, 50vh, 420px)"
+              fitToPlants
+            />
             <PlantTable plants={country.data.plants} />
           </>
         )}

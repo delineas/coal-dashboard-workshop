@@ -44,6 +44,10 @@ export interface MapPlant {
 
 export const mapPlantsApi = '/api/plants/map'
 
+export function countryMapPlantsApi(country: string): string {
+  return `${mapPlantsApi}?country=${encodeURIComponent(country)}`
+}
+
 export function plantApi(id: string): string {
   return `/api/plants/${encodeURIComponent(id)}`
 }
