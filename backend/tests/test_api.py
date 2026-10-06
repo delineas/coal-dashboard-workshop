@@ -93,3 +93,21 @@ def test_plant_with_coverage_change_only():
     kazakhstan = client.get("/api/countries/Kazakhstan").json()
     stepnogorsk = next(p for p in kazakhstan["plants"] if p["id"] == "L104985")
     assert stepnogorsk["change"] == "coverage"
+
+
+def test_plant_detail():
+    plant = client.get("/api/plants/L104985").json()
+    assert (plant["name"], plant["country"], plant["change"]) == ("Stepnogorsk power station", "Kazakhstan", "coverage")
+    assert {"owner", "parent", "subnational_unit", "lat", "lon", "wiki_url", "mw17", "mw23"} <= plant.keys()
+    assert plant["units"]
+    assert all(unit["comparable"] is False for unit in plant["units"])
+
+
+def test_unknown_plant_returns_404():
+    assert client.get("/api/plants/L000000").status_code == 404
+
+
+def test_plant_without_operating_capacity_still_returns_its_units():
+    plant = client.get("/api/plants/L100001").json()
+    assert (plant["mw17"], plant["mw23"], plant["change"]) == (0, 0, None)
+    assert plant["units"]

@@ -24,3 +24,22 @@ def country(name: str):
     if not row:
         raise HTTPException(status_code=404, detail="Country not found")
     return {**row, "plants": db.query_all(COUNTRY_PLANTS_SQL, (name,))}
+
+
+PLANT_UNITS_SQL = """
+SELECT
+    tracker_id, name, COALESCE(mw_2023, mw_2017) AS mw, status_2017, status_2023,
+    start_year, retired_year, technology, comparable
+FROM units
+WHERE plant_id = ?
+ORDER BY name
+"""
+
+
+@app.get("/api/plants/{plant_id}")
+def plant(plant_id: str):
+    row = db.query_one("SELECT * FROM plant_capacity WHERE id = ?", (plant_id,))
+    if not row:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    units = [{**unit, "comparable": bool(unit["comparable"])} for unit in db.query_all(PLANT_UNITS_SQL, (plant_id,))]
+    return {**row, "units": units}
