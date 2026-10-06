@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchCountries, type Country } from './api/countries'
+import KpiTiles from './components/KpiTiles'
 import { formatMw, formatPctChange, formatSignedMw, trendSymbol } from './format'
 
 export default function App() {
@@ -17,6 +18,11 @@ export default function App() {
       <h1 className="text-2xl font-semibold">Operating coal capacity, 2017 vs 2023</h1>
       {error && <p className="mt-4 text-red-700">{error}</p>}
       {!countries && !error && <p className="mt-4 text-gray-500">Loading…</p>}
+      {countries && (
+        <div className="mt-6">
+          <KpiTiles countries={countries} />
+        </div>
+      )}
       {countries && (
         <table className="mt-6 w-full text-sm">
           <thead>
