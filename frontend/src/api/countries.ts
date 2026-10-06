@@ -12,8 +12,12 @@ export interface Country {
   trend: Trend
 }
 
-export async function fetchCountries(): Promise<Country[]> {
-  const response = await fetch('/api/countries')
-  if (!response.ok) throw new Error(`API error ${response.status}`)
-  return response.json()
+export const countriesApi = '/api/countries'
+
+export function countryApi(name: string): string {
+  return `/api/countries/${encodeURIComponent(name)}`
+}
+
+export function countryPath(name: string): string {
+  return `/country/${encodeURIComponent(name)}`
 }

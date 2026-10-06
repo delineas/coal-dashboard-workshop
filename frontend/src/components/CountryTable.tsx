@@ -1,10 +1,20 @@
-import type { Country } from '../api/countries'
+import { Link } from 'react-router'
+import { countryPath, type Country } from '../api/countries'
 import { formatMw, formatPctChange, formatSignedMw, trendSymbol } from '../format'
 import Card from './Card'
 import SortableTable, { type Column } from './SortableTable'
 
 const columns: Column<Country>[] = [
-  { key: 'name', label: 'Country', sortValue: (c) => c.name, render: (c) => c.name },
+  {
+    key: 'name',
+    label: 'Country',
+    sortValue: (c) => c.name,
+    render: (c) => (
+      <Link to={countryPath(c.name)} className="font-medium text-zinc-900 hover:text-brand-600">
+        {c.name}
+      </Link>
+    ),
+  },
   { key: 'mw_2017', label: 'MW 2017', align: 'right', sortValue: (c) => c.mw_2017, render: (c) => formatMw(c.mw_2017) },
   { key: 'mw_2023', label: 'MW 2023', align: 'right', sortValue: (c) => c.mw_2023, render: (c) => formatMw(c.mw_2023) },
   {
@@ -27,7 +37,7 @@ const columns: Column<Country>[] = [
 
 export default function CountryTable({ countries }: { countries: Country[] }) {
   return (
-    <Card title="Countries" subtitle="Click a column to sort.">
+    <Card title="Countries" subtitle="Click a column to sort. Click a country to open it.">
       <SortableTable columns={columns} rows={countries} rowKey={(c) => c.name} />
     </Card>
   )

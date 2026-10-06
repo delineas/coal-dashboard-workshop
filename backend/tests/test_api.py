@@ -63,3 +63,13 @@ def test_unit_removed_from_the_tracker_is_not_comparable():
 
 def test_pct_change_is_null_without_comparable_2017_capacity():
     assert countries_by_name()["Panama"]["pct_change"] is None
+
+
+def test_country_detail():
+    response = client.get("/api/countries/Türkiye")
+    assert response.status_code == 200
+    assert response.json() == countries_by_name()["Türkiye"]
+
+
+def test_unknown_country_returns_404():
+    assert client.get("/api/countries/Atlantis").status_code == 404

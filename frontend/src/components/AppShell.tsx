@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Link, NavLink } from 'react-router'
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -7,7 +8,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-zinc-50 font-sans text-zinc-900 antialiased lg:flex">
       <aside className="sticky top-0 z-[1000] border-b border-zinc-200 bg-white lg:h-screen lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
         <div className="flex h-14 items-center justify-between px-4 lg:h-16 lg:px-5">
-          <a href="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-white">
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
                 <path d="M3 15h2V9H3v6Zm4 0h2V5H7v10Zm4 0h2v-4h-2v4Zm4 0h2V7h-2v8Z" />
@@ -17,7 +18,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <span className="block text-sm font-semibold">Coal Capacity</span>
               <span className="block text-[11px] text-zinc-500">2017 → 2023</span>
             </span>
-          </a>
+          </Link>
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -33,12 +34,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
           className={`${menuOpen ? 'flex' : 'hidden'} flex-col px-4 pb-5 lg:flex lg:h-[calc(100vh-4rem)] lg:overflow-y-auto lg:px-5`}
         >
           <nav className="mt-1">
-            <a
-              href="/"
-              className="flex items-center rounded-md bg-brand-50 px-2.5 py-2 text-sm font-medium text-brand-700"
+            <NavLink
+              to="/"
+              end
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center rounded-md px-2.5 py-2 text-sm font-medium ${isActive ? 'bg-brand-50 text-brand-700' : 'text-zinc-600 hover:bg-zinc-50'}`
+              }
             >
               Overview
-            </a>
+            </NavLink>
           </nav>
           <p className="mt-6 border-t border-zinc-100 pt-4 text-[11px] text-zinc-400 lg:mt-auto">
             Data: GEM, Jan 2017 and July 2023
