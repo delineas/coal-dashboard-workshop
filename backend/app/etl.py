@@ -27,15 +27,29 @@ CREATE TABLE units (
     status_2017 TEXT,
     mw_2017 REAL,
     status_2023 TEXT,
-    mw_2023 REAL
+    mw_2023 REAL,
+    start_year INTEGER,
+    comparable INTEGER NOT NULL,
+    op_2017 REAL GENERATED ALWAYS AS (CASE WHEN status_2017 = 'operating' THEN mw_2017 ELSE 0 END),
+    op_2023 REAL GENERATED ALWAYS AS (CASE WHEN status_2023 = 'operating' THEN mw_2023 ELSE 0 END)
 );
-CREATE VIEW country_capacity AS
+CREATE VIEW country_totals AS
 SELECT
     country AS name,
-    SUM(CASE WHEN status_2017 = 'operating' THEN mw_2017 ELSE 0 END) AS mw_2017,
-    SUM(CASE WHEN status_2023 = 'operating' THEN mw_2023 ELSE 0 END) AS mw_2023
+    SUM(op_2017) AS mw_2017,
+    SUM(op_2023) AS mw_2023,
+    SUM(op_2017 * comparable) AS cmp_2017,
+    SUM(op_2023 * comparable) AS cmp_2023
 FROM units
 GROUP BY country;
+CREATE VIEW country_capacity AS
+SELECT
+    *,
+    cmp_2023 - cmp_2017 AS delta_mw,
+    (mw_2023 - mw_2017) - (cmp_2023 - cmp_2017) AS coverage_mw,
+    CASE WHEN cmp_2017 > 0 THEN (cmp_2023 - cmp_2017) * 100.0 / cmp_2017 END AS pct_change,
+    CASE WHEN cmp_2023 > cmp_2017 THEN 'up' WHEN cmp_2023 < cmp_2017 THEN 'down' ELSE 'flat' END AS trend
+FROM country_totals;
 """
 
 
@@ -51,6 +65,13 @@ class Unit:
     mw_2017: float | None = None
     status_2023: str | None = None
     mw_2023: float | None = None
+    start_year: int | None = None
+
+    @property
+    def comparable(self) -> bool:
+        if self.status_2017 is None:
+            return self.start_year is not None and self.start_year >= 2017
+        return self.status_2023 is not None
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -100,6 +121,7 @@ def merge_units(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]]
         unit.country = row["Country"]
         unit.status_2023 = row["Status"].lower()
         unit.mw_2023 = parse_mw(row["Capacity (MW)"])
+        unit.start_year = int(row["Start year"]) if row["Start year"] else None
     return units
 
 
@@ -112,8 +134,12 @@ def build(csv_2017: Path, csv_2023: Path, db_path: Path) -> Counter[str]:
     with sqlite3.connect(db_path) as conn:
         conn.executescript(SCHEMA)
         conn.executemany(
-            "INSERT INTO units VALUES (?, ?, ?, ?, ?, ?)",
-            [(u.tracker_id, u.country, u.status_2017, u.mw_2017, u.status_2023, u.mw_2023) for u in units.values()],
+            "INSERT INTO units (tracker_id, country, status_2017, mw_2017, status_2023, mw_2023, start_year, comparable)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (u.tracker_id, u.country, u.status_2017, u.mw_2017, u.status_2023, u.mw_2023, u.start_year, u.comparable)
+                for u in units.values()
+            ],
         )
     return discarded
 

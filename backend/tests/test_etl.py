@@ -21,14 +21,14 @@ def conn(db_path):
 
 
 def country_rows(conn):
-    return {name: (mw17, mw23) for name, mw17, mw23 in conn.execute("SELECT * FROM country_capacity")}
+    return {row[0]: row[1:] for row in conn.execute("SELECT name, mw_2017, mw_2023 FROM country_capacity")}
 
 
 def test_operating_capacity_by_country(conn):
     assert country_rows(conn) == {
         "Atlantis": (100, 100),
         "Lemuria": (1200, 0),
-        "Mu": (70, 370),
+        "Mu": (70, 395),
         "Türkiye": (80, 80),
     }
 
@@ -53,3 +53,36 @@ def test_first_duplicate_row_is_kept(conn):
 
 def test_unit_uses_its_2023_country_for_both_years(conn):
     assert conn.execute("SELECT country FROM units WHERE tracker_id = 'G6'").fetchone() == ("Mu",)
+
+
+def comparable(conn, tracker_id):
+    return conn.execute("SELECT comparable FROM units WHERE tracker_id = ?", (tracker_id,)).fetchone()[0]
+
+
+def test_unit_in_both_files_is_comparable(conn):
+    assert comparable(conn, "G1") == 1
+
+
+def test_2023_unit_that_started_in_2017_or_later_is_comparable(conn):
+    assert comparable(conn, "G4") == 1
+
+
+def test_2023_unit_that_started_before_2017_is_not_comparable(conn):
+    assert comparable(conn, "G8") == 0
+
+
+def test_2017_only_unit_is_not_comparable(db_path):
+    etl.build(FIXTURES / "units_2017.csv", FIXTURES / "units_2023_without_g6.csv", db_path)
+    with sqlite3.connect(db_path) as connection:
+        assert comparable(connection, "G6") == 0
+
+
+def test_country_change_uses_comparable_units(conn):
+    mu = conn.execute(
+        "SELECT mw_2017, mw_2023, cmp_2017, cmp_2023, delta_mw, coverage_mw, trend FROM country_capacity WHERE name = 'Mu'"
+    ).fetchone()
+    assert mu == (70, 395, 70, 370, 300, 25, "up")
+
+
+def test_pct_change_uses_comparable_2017_capacity(conn):
+    assert conn.execute("SELECT pct_change FROM country_capacity WHERE name = 'Mu'").fetchone()[0] == pytest.approx(428.57, 0.01)

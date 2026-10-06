@@ -1,8 +1,13 @@
 from fastapi.testclient import TestClient
 
+from app import db
 from app.main import app
 
 client = TestClient(app)
+
+
+def unit(tracker_id):
+    return db.query_one("SELECT country, op_2017, op_2023, comparable FROM units WHERE tracker_id = ?", (tracker_id,))
 
 
 def test_countries_global_totals():
@@ -22,6 +27,39 @@ def test_countries_count():
 
 
 def test_units_count_for_their_2023_country_in_both_years():
-    countries = {c["name"]: c for c in client.get("/api/countries").json()}
+    countries = countries_by_name()
     assert (countries["Hong Kong"]["mw_2017"], countries["Hong Kong"]["mw_2023"]) == (6_608, 6_112)
     assert countries["China"]["mw_2017"] == 914_619
+
+
+def countries_by_name():
+    return {c["name"]: c for c in client.get("/api/countries").json()}
+
+
+def test_country_fields():
+    fields = {"name", "mw_2017", "mw_2023", "cmp_2017", "cmp_2023", "delta_mw", "coverage_mw", "pct_change", "trend"}
+    assert all(set(c) == fields for c in client.get("/api/countries").json())
+
+
+def test_global_comparable_change():
+    countries = client.get("/api/countries").json()
+    assert sum(c["cmp_2017"] for c in countries) == 1_921_722
+    assert sum(c["cmp_2023"] for c in countries) == 2_054_880
+    assert sum(c["delta_mw"] for c in countries) == 133_158
+    assert sum(c["coverage_mw"] for c in countries) == -3_523
+
+
+def test_unit_added_to_the_tracker_later_is_only_in_the_snapshot():
+    assert unit("G113594") == {"country": "Czech Republic", "op_2017": 0, "op_2023": 30, "comparable": 0}
+
+
+def test_unit_built_after_2017_is_comparable():
+    assert unit("G114937") == {"country": "China", "op_2017": 0, "op_2023": 50, "comparable": 1}
+
+
+def test_unit_removed_from_the_tracker_is_not_comparable():
+    assert unit("G110459") == {"country": "South Korea", "op_2017": 50, "op_2023": 0, "comparable": 0}
+
+
+def test_pct_change_is_null_without_comparable_2017_capacity():
+    assert countries_by_name()["Panama"]["pct_change"] is None
