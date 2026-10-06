@@ -30,6 +30,20 @@ export interface PlantDetail {
   units: PlantUnit[]
 }
 
+export interface MapPlant {
+  id: string
+  name: string
+  lat: number
+  lon: number
+  mw17: number
+  mw23: number
+  cmp17: number
+  cmp23: number
+  change: Change
+}
+
+export const mapPlantsApi = '/api/plants/map'
+
 export function plantApi(id: string): string {
   return `/api/plants/${encodeURIComponent(id)}`
 }

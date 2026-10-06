@@ -36,7 +36,7 @@ The spec does not give these details. The plan uses these values. Change them be
 
 | Topic | Latest moment |
 |---|---|
-| Map tile provider (CARTO shows "API KEY REQUIRED"), its attribution, and an API key in `.env` if necessary | Before step 14 |
+| Map tile provider | Closed in step 14: Esri World Light Gray Base, no key (ADR 0004) |
 
 ## 5. Steps
 
