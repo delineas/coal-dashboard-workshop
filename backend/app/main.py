@@ -26,6 +26,14 @@ def country(name: str):
     return {**row, "plants": db.query_all(COUNTRY_PLANTS_SQL, (name,))}
 
 
+@app.get("/api/plants/map")
+def plant_map():
+    return db.query_all(
+        "SELECT id, name, lat, lon, mw17, mw23, cmp17, cmp23, change FROM plant_capacity"
+        " WHERE change IS NOT NULL AND lat IS NOT NULL AND lon IS NOT NULL"
+    )
+
+
 PLANT_UNITS_SQL = """
 SELECT
     tracker_id, name, COALESCE(mw_2023, mw_2017) AS mw, status_2017, status_2023,

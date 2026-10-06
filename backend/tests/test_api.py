@@ -111,3 +111,15 @@ def test_plant_without_operating_capacity_still_returns_its_units():
     plant = client.get("/api/plants/L100001").json()
     assert (plant["mw17"], plant["mw23"], plant["change"]) == (0, 0, None)
     assert plant["units"]
+
+
+def test_map_plants_have_coordinates_and_a_change():
+    plants = client.get("/api/plants/map").json()
+    assert all(p["lat"] is not None and p["lon"] is not None and p["change"] is not None for p in plants)
+
+
+def test_plant_without_coordinates_is_not_on_the_map():
+    without_coordinates = db.query_one(
+        "SELECT id FROM plant_capacity WHERE change IS NOT NULL AND lat IS NULL ORDER BY id LIMIT 1"
+    )["id"]
+    assert without_coordinates not in {p["id"] for p in client.get("/api/plants/map").json()}
