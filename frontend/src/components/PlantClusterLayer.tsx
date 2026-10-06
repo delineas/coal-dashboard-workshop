@@ -8,7 +8,7 @@ import { plantPath, type MapPlant } from '../api/plants'
 import { changeOrder, changes, yearModeColor, type Change } from '../change'
 import { formatMw } from '../format'
 
-export interface PlantMarker {
+interface PlantMarker {
   plant: MapPlant
   radius: number
   change: Change | null
