@@ -10,6 +10,19 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 CSV_2017 = DATA_DIR / "Global-Coal-Plant-Tracker-Jan-2017.csv"
 CSV_2023 = DATA_DIR / "Global-Coal-Plant-Tracker-July-2023.csv"
 
+COUNTRY_NAMES_2017 = {
+    "Turkey": "Türkiye",
+    "FYROM": "North Macedonia",
+    "Swaziland": "Eswatini",
+    "Democratic Republic of Congo": "DR Congo",
+    "Bosnia & Herzegovina": "Bosnia and Herzegovina",
+}
+COUNTRIES_ONLY_2017 = {"Jordan", "Reunion"}
+
+
+class UnknownCountryError(ValueError):
+    pass
+
 
 def read_rows(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8-sig", newline="") as fh:
@@ -32,9 +45,21 @@ def operating_by_country(rows: list[dict[str, str]]) -> dict[str, float]:
     return totals
 
 
+def normalize_2017_countries(rows_2017: list[dict[str, str]], rows_2023: list[dict[str, str]]) -> None:
+    known = {row["Country"] for row in rows_2023} | COUNTRIES_ONLY_2017
+    for row in rows_2017:
+        if not row["Country"]:
+            continue
+        row["Country"] = COUNTRY_NAMES_2017.get(row["Country"], row["Country"])
+        if row["Country"] not in known:
+            raise UnknownCountryError(f"Unknown 2017 country: {row['Country']}")
+
+
 def build(csv_2017: Path, csv_2023: Path, db_path: Path) -> None:
-    mw_2017 = operating_by_country(read_rows(csv_2017))
-    mw_2023 = operating_by_country(read_rows(csv_2023))
+    rows_2017, rows_2023 = read_rows(csv_2017), read_rows(csv_2023)
+    normalize_2017_countries(rows_2017, rows_2023)
+    mw_2017 = operating_by_country(rows_2017)
+    mw_2023 = operating_by_country(rows_2023)
     db_path.unlink(missing_ok=True)
     with sqlite3.connect(db_path) as conn:
         conn.execute("CREATE TABLE country_capacity (name TEXT PRIMARY KEY, mw_2017 REAL, mw_2023 REAL)")

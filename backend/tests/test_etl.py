@@ -18,4 +18,15 @@ def conn(tmp_path):
 
 def test_operating_capacity_by_country(conn):
     rows = {name: (mw17, mw23) for name, mw17, mw23 in conn.execute("SELECT * FROM country_capacity")}
-    assert rows == {"Atlantis": (100, 100), "Lemuria": (1200, 0), "Mu": (0, 300)}
+    assert rows == {"Atlantis": (100, 100), "Lemuria": (1200, 0), "Mu": (0, 300), "Türkiye": (80, 80)}
+
+
+def test_2017_country_names_use_2023_names(conn):
+    names = {name for (name,) in conn.execute("SELECT name FROM country_capacity")}
+    assert "Türkiye" in names
+    assert "Turkey" not in names
+
+
+def test_unknown_2017_country_stops_the_etl(tmp_path):
+    with pytest.raises(etl.UnknownCountryError, match="Hyperborea"):
+        etl.build(FIXTURES / "units_2017_unknown_country.csv", FIXTURES / "units_2023.csv", tmp_path / "coal.sqlite")
