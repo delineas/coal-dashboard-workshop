@@ -7,7 +7,7 @@ import sys
 
 SERVER_MARKERS = ("uvicorn", "vite", "serve.py", "http.server", "Google Chrome")
 OWN_MARKERS = ("cdp-verify",)
-SHELLS = ("/bin/zsh", "/bin/bash", "/bin/sh", "zsh", "bash", "sh")
+IGNORED_EXECUTABLES = ("zsh", "bash", "sh", "claude")
 
 
 def server_processes() -> dict[int, str]:
@@ -15,7 +15,7 @@ def server_processes() -> dict[int, str]:
     servers = {}
     for line in ps.stdout.splitlines():
         pid, _, command = line.strip().partition(" ")
-        if command.split(" ", 1)[0] in SHELLS or "Helper" in command:
+        if os.path.basename(command.split(" ", 1)[0]) in IGNORED_EXECUTABLES or "Helper" in command:
             continue
         if any(marker in command for marker in SERVER_MARKERS):
             servers[int(pid)] = command
