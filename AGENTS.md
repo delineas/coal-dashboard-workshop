@@ -19,6 +19,27 @@ These rules apply to all agents that work in this repository.
 - Use the Conventional Commits format.
 - Do not add signature or co-author lines (for example, `Co-Authored-By`).
 
+## Code
+
+- Do not write comments that repeat what the code does.
+- Do not add defensive checks that the domain does not need.
+
+## Decisions
+
+- Write an ADR in `docs/decisions/` when you add a dependency or an architecture pattern, or when you make a decision that is hard to reverse.
+- State in the ADR if the decision is reversible.
+- Do not write an ADR for a routine fix or for a preference that a linter already checks.
+
+## Plans
+
+- Make each step small. Each step adds one thing and is integrated with the previous steps.
+- Do not leave orphan code. Each export must have a user.
+
+## Browser tools
+
+- Do not use the Chrome DevTools MCP unless the user gives permission for the task.
+- Use the test suite and `curl` to check your work in all other cases.
+
 ## Work documents
 
 - Put work documents that you do not need after the session in `.scratchpad/`.
