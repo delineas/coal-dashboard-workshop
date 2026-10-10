@@ -69,6 +69,7 @@ The ETL changes these 2017 names to the 2023 names:
 ### 4.4 Bad rows
 
 - The ETL discards 2017 rows with an empty status or an empty capacity (200 rows).
+- The ETL discards 2017 rows with an empty `Tracker ID` (2 rows, status `pre`).
 - For a duplicate `Tracker ID` in 2017, the ETL keeps the first row and discards the others.
 - The ETL prints a summary of the discarded rows.
 - Units without coordinates count in the totals. They do not show on maps.
@@ -159,6 +160,7 @@ The plant change compares `cmp17` and `cmp23` exactly:
 - Mode selector: `2017`, `2023`, `Change`. The default is `Change`.
 - Markers that are near each other make a cluster. The cluster icon is a donut that shows the share of each change class, with the plant count in the center.
 - A popup shows the plant name, MW 2017 → MW 2023 and a link to the plant page.
+- Tiles: Esri World Light Gray Base, with the Esri attribution.
 - The map shows a legend.
 
 ## 7. Acceptance criteria
@@ -400,7 +402,7 @@ The plant change compares `cmp17` and `cmp23` exactly:
 
 ## 9. Delivery
 
-- [`docs/plan.md`](plan.md) gives the steps and their branches. Step 1 is a walking skeleton.
+- [`docs/plan.md`](plan.md) gives the steps. Step 1 is a walking skeleton. All steps use one branch.
 - After user approval, merge each branch into `main` with `--no-ff`.
 - Small atomic commits, Conventional Commits, no signature lines.
 
@@ -425,4 +427,4 @@ The plant change compares `cmp17` and `cmp23` exactly:
 
 ## 11. Open items
 
-- **Map tiles:** CARTO basemaps show "API KEY REQUIRED" on `localhost` and `file://`. Select a tile provider before `feature/plant-map`.
+- None. The map tile provider is Esri World Light Gray Base (see `docs/decisions/0004-leaflet-and-esri-tiles.md`).

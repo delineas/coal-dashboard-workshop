@@ -1,0 +1,10 @@
+{
+  "name": "coal-dashboard",
+  "private": true,
+  "scripts": {
+    "moon": "moon"
+  },
+  "devDependencies": {
+    "@moonrepo/cli": "^2.5.6"
+  }
+}

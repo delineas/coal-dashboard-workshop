@@ -1,0 +1,27 @@
+language: 'python'
+layer: 'application'
+
+tasks:
+  etl:
+    command: '../.venv/bin/python -m app.etl'
+    toolchains: 'system'
+    inputs:
+      - 'app/etl.py'
+      - 'app/db.py'
+      - '/data/**/*.csv'
+    outputs:
+      - 'coal.sqlite'
+  dev:
+    command: '../.venv/bin/uvicorn app.main:app --port 8000 --reload'
+    toolchains: 'system'
+    preset: 'server'
+    deps:
+      - 'etl'
+  test:
+    command: '../.venv/bin/python -m pytest'
+    toolchains: 'system'
+    deps:
+      - 'etl'
+    inputs:
+      - 'app/**/*'
+      - 'tests/**/*'

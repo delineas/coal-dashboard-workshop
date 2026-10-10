@@ -20,6 +20,8 @@ node_modules/
 dist/
 .venv/
 __pycache__/
+*.egg-info/
+.moon/cache/
 
 # Generated databases and logs
 *.sqlite
