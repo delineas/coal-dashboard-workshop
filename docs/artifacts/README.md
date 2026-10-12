@@ -21,3 +21,15 @@ unzip docs/artifacts/spec-writer.zip -d .claude/skills
 ```
 
 Then start a new Claude Code session. The skill is available as `/spec-writer`.
+
+## leftover_procs.py
+
+`leftover_procs.py` is a Claude Code hook. It runs on the `Stop` and `SubagentStop` events. It stops the end of a turn while servers or browsers from this repository still run.
+
+The repository does not enable the hook. `docs/claude-settings.json` contains the settings that enable it. To use it, put the files back in `.claude/`:
+
+```sh
+mkdir -p .claude/hooks
+cp docs/artifacts/leftover_procs.py .claude/hooks/
+cp docs/claude-settings.json .claude/settings.json
+```
