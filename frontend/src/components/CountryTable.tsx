@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { countryPath, type Country } from '../api/countries'
+import { countriesCsvApi, countryPath, type Country } from '../api/countries'
 import { formatMw, formatPctChange, formatSignedMw, trendSymbol } from '../format'
 import Card from './Card'
 import SortableTable, { type Column } from './SortableTable'
@@ -39,6 +39,12 @@ export default function CountryTable({ countries }: { countries: Country[] }) {
   return (
     <Card title="Countries" subtitle="Click a column to sort. Click a country to open it.">
       <SortableTable columns={columns} rows={countries} rowKey={(c) => c.name} />
+      {/* shortcut: the link sits under the table because Card has no header action slot; add one to Card when a second card needs a button. */}
+      <div className="border-t border-zinc-100 px-4 py-3 text-right sm:px-5">
+        <a href={countriesCsvApi} download className="text-xs font-medium text-brand-600 hover:text-brand-700">
+          Download CSV
+        </a>
+      </div>
     </Card>
   )
 }

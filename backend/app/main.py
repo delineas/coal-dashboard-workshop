@@ -1,4 +1,7 @@
-from fastapi import FastAPI, HTTPException
+import csv
+import io
+
+from fastapi import FastAPI, HTTPException, Response
 
 from . import db
 
@@ -16,6 +19,35 @@ ORDER BY mw23 DESC, mw17 DESC
 @app.get("/api/countries")
 def countries():
     return db.query_all(f"{COUNTRY_SQL} ORDER BY mw_2023 DESC")
+
+
+CSV_COLUMNS = {
+    "name": "Country",
+    "mw_2017": "MW 2017",
+    "mw_2023": "MW 2023",
+    "delta_mw": "Δ MW",
+    "pct_change": "Δ %",
+    "coverage_mw": "Coverage",
+    "trend": "Trend",
+}
+
+
+@app.get("/api/countries.csv")
+def countries_csv():
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(CSV_COLUMNS.values())
+    # shortcut: rows keep the API order (MW 2023, largest first), not the sort the user picked in the table; pass the sort key as a query parameter when an analyst asks for it.
+    for row in countries():
+        # shortcut: raw numbers and an empty Δ % for "new" or "not comparable", not the labels of the table; add a label column if analysts misread the empty cells.
+        writer.writerow(row[key] for key in CSV_COLUMNS)
+    # shortcut: the full file is built in memory, which is fine for 82 countries; stream the response if the export grows to plant or unit rows.
+    # shortcut: fixed file name with no date, so weekly downloads overwrite each other.
+    return Response(
+        out.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="countries.csv"'},
+    )
 
 
 @app.get("/api/countries/{name}")

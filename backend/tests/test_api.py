@@ -1,3 +1,6 @@
+import csv
+import io
+
 from fastapi.testclient import TestClient
 
 from app import db
@@ -131,3 +134,13 @@ def test_map_country_filter():
     assert india
     assert {p["id"] for p in india} <= india_ids
     assert all(p["lat"] is not None and p["change"] is not None for p in india)
+
+
+def test_countries_csv():
+    response = client.get("/api/countries.csv")
+    assert response.headers["content-type"].startswith("text/csv")
+    rows = list(csv.reader(io.StringIO(response.text)))
+    assert rows[0] == ["Country", "MW 2017", "MW 2023", "Δ MW", "Δ %", "Coverage", "Trend"]
+    assert len(rows) == 83
+    panama = next(r for r in rows if r[0] == "Panama")
+    assert panama[4] == ""

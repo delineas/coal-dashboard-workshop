@@ -16,6 +16,8 @@ export interface Country {
 
 export const countriesApi = '/api/countries'
 
+export const countriesCsvApi = '/api/countries.csv'
+
 export function countryApi(name: string): string {
   return `/api/countries/${encodeURIComponent(name)}`
 }
