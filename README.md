@@ -32,6 +32,13 @@ The ETL reads `data/*.csv` and writes `backend/coal.sqlite`. Git ignores the dat
 
 The tasks `backend:dev` and `backend:test` run the ETL first.
 
+To ask questions about the data, query the database with the CLI. Run it from `backend/`:
+
+    ../.venv/bin/python -m app.cli schema
+    ../.venv/bin/python -m app.cli sql "SELECT name, mw_2017, mw_2023 FROM country_capacity ORDER BY mw_2023 DESC" --limit 10
+
+The CLI opens the database in read-only mode. It shows a maximum of 50 rows by default.
+
 ## Run
 
     npx moon run backend:dev
