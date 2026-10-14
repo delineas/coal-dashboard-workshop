@@ -32,3 +32,4 @@ __pycache__/
 frontend/test-results/
 frontend/playwright-report/
 backend/mutants/
+backend/.hypothesis/
