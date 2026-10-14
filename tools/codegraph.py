@@ -330,12 +330,115 @@ def relation(table):
     return run
 
 
+def endpoint_for(eps, url):
+    """The endpoint row whose path matches url; a literal segment beats a {param}."""
+    hits = [e for e in eps if re.fullmatch("[^/]+".join(map(re.escape, re.sub(r"\{[^}]*\}", "{}", e[3]).split("{}"))), url)]
+    return min(hits, key=lambda e: e[3].count("{"), default=None)
+
+
+def app_flow(db):
+    """The app as one chain: route -> page -> components -> API helper -> endpoint -> tables, plus the tests per endpoint.
+
+    Returns (nodes, edges): nodes maps an id to (kind, label, "file:line"); edges are (source id, relation, target id).
+    """
+    nodes, edges = {}, []
+    defined = {name: (f, line) for f, name, line in db.execute("SELECT file, name, start_line FROM symbols")}
+
+    def node(kind, label, loc=""):
+        key = f"{kind}:{label}"
+        nodes.setdefault(key, (kind, label, loc))
+        return key
+
+    def at(name):
+        f, line = defined.get(name, ("", 0))
+        return f"{f}:{line}" if f else ""
+
+    eps = db.execute("SELECT file, line, method, path, symbol FROM endpoints ORDER BY path").fetchall()
+    helpers = {symbol: (f, line, url) for f, line, url, symbol in db.execute("SELECT file, line, url, symbol FROM api_urls")}
+    for f, line, path, component in db.execute("SELECT file, line, path, component FROM routes ORDER BY line"):
+        edges.append((node("route", path, f"{f}:{line}"), "shows", node("page", component, at(component))))
+    renders = db.execute("SELECT DISTINCT symbol, name FROM refs WHERE kind = 'render' AND file LIKE 'frontend/src/%' AND symbol <> name").fetchall()
+    ui = {symbol for symbol, _ in renders} | {component for (component,) in db.execute("SELECT component FROM routes")}
+    for symbol, name in renders:
+        if name in defined and symbol in ui:
+            kind = "page" if f"page:{symbol}" in nodes else "component"
+            edges.append((node(kind, symbol, at(symbol)), "renders", node("component", name, at(name))))
+    for f, symbol, name in db.execute("SELECT DISTINCT file, symbol, name FROM refs WHERE kind <> 'render'"):
+        if name in helpers and symbol not in helpers:
+            kind = "page" if f"page:{symbol}" in nodes else "component"
+            edges.append((node(kind, symbol, at(symbol)), "calls", node("api", name, f"{helpers[name][0]}:{helpers[name][1]}")))
+    for name, (f, line, url) in helpers.items():
+        if ep := endpoint_for(eps, url):
+            epf, epl, method, path, handler = ep
+            edges.append((node("api", name, f"{f}:{line}"), "requests", node("endpoint", f"{method} {path}", f"{epf}:{epl}")))
+    for epf, epl, method, path, handler in eps:
+        ep = node("endpoint", f"{method} {path}", f"{epf}:{epl}")
+        for (table,) in db.execute("SELECT DISTINCT table_name FROM sql_refs WHERE file = ? AND symbol = ? ORDER BY table_name", (epf, handler)):
+            edges.append((ep, "reads", node("table", table)))
+    for f, line, symbol, url in db.execute("SELECT file, line, symbol, url FROM tests_hit ORDER BY file, line"):
+        if ep := endpoint_for(eps, url):
+            edges.append((node("test", symbol, f"{f}:{line}"), "tests", node("endpoint", f"{ep[2]} {ep[3]}", f"{ep[0]}:{ep[1]}")))
+    return nodes, list(dict.fromkeys(edges))
+
+
+def flow_tree(nodes, edges, pattern=""):
+    """The app flow as an ASCII tree, one branch per route."""
+    out_edges = defaultdict(list)
+    for src, rel, dst in edges:
+        out_edges[src].append((rel, dst))
+    tested = defaultdict(list)
+    for src, rel, dst in edges:
+        if rel == "tests":
+            tested[dst].append(nodes[src][1])
+
+    def label(key):
+        kind, text, loc = nodes[key]
+        return f"{text}  ({loc})" if loc else text
+
+    def calls_api(key, seen):
+        """The API helpers this page or component calls, itself or through what it renders."""
+        found = []
+        for rel, dst in out_edges[key]:
+            if rel == "calls":
+                found.append((None, dst))
+            elif rel == "renders" and dst not in seen:
+                found += [(via or nodes[dst][1], api) for via, api in calls_api(dst, seen | {dst})]
+        return found
+
+    lines = []
+
+    def branch(items, prefix):
+        for i, (text, children) in enumerate(items):
+            last = i == len(items) - 1
+            lines.append(prefix + ("└── " if last else "├── ") + text)
+            branch(children, prefix + ("    " if last else "│   "))
+
+    for src, rel, page in edges:
+        if rel != "shows" or pattern not in nodes[src][1] + nodes[page][1]:
+            continue
+        lines.append(f"{nodes[src][1]}  ->  {label(page)}")
+        rendered = sorted({nodes[d][1] for r, d in out_edges[page] if r == "renders"})
+        items = [(f"renders  {', '.join(rendered)}", [])] if rendered else []
+        for via, api in sorted(set(calls_api(page, {page})), key=lambda c: (c[0] or "", nodes[c[1]][1])):
+            children = []
+            for rel2, ep in out_edges[api]:
+                tables = [nodes[t][1] for r, t in out_edges[ep] if r == "reads"]
+                leaves = [(f"reads  {', '.join(tables)}", [])] if tables else []
+                if tested[ep]:
+                    leaves.append((f"tests  {', '.join(sorted(set(tested[ep])))}", []))
+                children.append((label(ep), leaves))
+            name = nodes[api][1] + (f"  (via {via})" if via else "")
+            items.append((name, children))
+        branch(items, "")
+        lines.append("")
+    return lines
+
+
 def cmd_endpoint(db, pattern=""):
     eps = db.execute("SELECT file, line, method, path, symbol FROM endpoints ORDER BY path").fetchall()
 
     def owner(url):
-        hits = [e for e in eps if re.fullmatch("[^/]+".join(map(re.escape, re.sub(r"\{[^}]*\}", "{}", e[3]).split("{}"))), url)]
-        return min(hits, key=lambda e: e[3].count("{"), default=None)
+        return endpoint_for(eps, url)
 
     detail = {e: [] for e in eps}
     for f, line, url, symbol in db.execute("SELECT file, line, url, symbol FROM api_urls ORDER BY file, line"):
@@ -358,6 +461,11 @@ def cmd_endpoint(db, pattern=""):
     out(lines)
 
 
+def cmd_tree(db, pattern=""):
+    for line in flow_tree(*app_flow(db), pattern):
+        print(line)
+
+
 COMMANDS = {
     "find": (cmd_find, "PATTERN", "symbols whose name contains PATTERN"),
     "outline": (cmd_outline, "FILE", "symbols of a file, with start-end lines"),
@@ -365,6 +473,7 @@ COMMANDS = {
     "callers": (cmd_callers, "NAME", "where NAME is called, rendered or referenced"),
     "callees": (cmd_callees, "SYMBOL", "what SYMBOL calls, renders or references"),
     "endpoint": (cmd_endpoint, "[PATH]", "endpoint with its frontend users, tests and SQL"),
+    "tree": (cmd_tree, "[ROUTE]", "route -> page -> API -> endpoint -> tables, as an ASCII tree"),
     **{t: (relation(t), "[FILTER]", f"rows of the {t} relation") for t in TABLES if t not in ("symbols", "refs")},
 }
 

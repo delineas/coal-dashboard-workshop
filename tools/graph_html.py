@@ -1,110 +1,142 @@
-"""Write .codegraph/graph.html: a file-level import graph that opens without a server."""
+"""Write .codegraph/graph.html: the app flow (route -> page -> API -> endpoint -> table, and tests) drawn with Cytoscape.js.
+
+The page needs network access once, to load Cytoscape.js from cdnjs.
+"""
 import json
 import sqlite3
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-DB = ROOT / ".codegraph" / "graph.sqlite"
+sys.path.insert(0, str(Path(__file__).parent))
+from codegraph import DB_PATH, ROOT, app_flow  # noqa: E402
+
 OUT = ROOT / ".codegraph" / "graph.html"
 
 PAGE = """<!doctype html>
 <meta charset="utf-8">
-<title>Code graph</title>
+<title>Code graph · app flow</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
 <style>
-  body { margin: 0; font: 12px system-ui, sans-serif; }
-  svg { width: 100vw; height: 100vh; display: block; }
-  line { stroke: #bbb; stroke-width: 1; marker-end: url(#arrow); }
-  text { pointer-events: none; }
-  circle { cursor: grab; stroke: #fff; stroke-width: 1.5; }
+  body { margin: 0; padding: 24px; font: 14px system-ui, sans-serif; background: #f4f5f2; color: #1d2b2e; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 12px 0; }
+  .bar button { padding: 4px 12px; border: 1px solid #9aa; border-radius: 6px; background: #fff; cursor: pointer; }
+  .bar button.on { background: #1d2b2e; color: #fff; }
+  .bar label { display: flex; gap: 6px; align-items: center; }
+  .key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+  .wrap { display: flex; gap: 16px; }
+  #cy { flex: 1; height: 640px; max-width: 1200px; background: #fff; border: 1px solid #c9d1cf; border-radius: 10px; }
+  #info { width: 280px; font-size: 13px; line-height: 1.5; }
+  #info code { font-size: 12px; }
 </style>
-<svg>
-  <defs><marker id="arrow" viewBox="0 0 10 10" refX="18" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-    <path d="M0 0L10 5L0 10z" fill="#bbb"/></marker></defs>
-  <g id="edges"></g><g id="nodes"></g>
-</svg>
+<h1>App flow</h1>
+<div>Scroll to zoom, drag to move. Click a node to light up what it touches; click the background to clear.</div>
+<div class="bar" id="bar">
+  <button data-layout="breadthfirst" class="on">Tree</button>
+  <button data-layout="cose">Forces</button>
+  <button id="fit">Fit</button>
+  <input id="q" placeholder="Find a node…">
+</div>
+<div class="bar" id="kinds"></div>
+<div class="wrap"><div id="cy"></div><div id="info"></div></div>
 <script>
 const data = __DATA__;
-const NS = "http://www.w3.org/2000/svg";
-const svg = document.querySelector("svg");
-const W = innerWidth, H = innerHeight;
-const palette = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#b07aa1", "#edc948", "#9c755f"];
-const groups = [...new Set(data.nodes.map(n => n.group))];
-const byId = new Map();
-data.nodes.forEach((n, i) => {
-  n.x = W / 2 + 200 * Math.cos(i); n.y = H / 2 + 200 * Math.sin(i); n.vx = n.vy = 0;
-  byId.set(n.id, n);
+const COLORS = { route: "#1d2b2e", page: "#c96043", component: "#d49369", api: "#c79a21", endpoint: "#3f8f8a", table: "#75b7b2", test: "#9aa5a3" };
+const SHAPES = { route: "round-tag", page: "round-rectangle", component: "round-rectangle", api: "round-rectangle", endpoint: "round-rectangle", table: "barrel", test: "ellipse" };
+const cy = cytoscape({
+  container: document.getElementById("cy"),
+  elements: [
+    ...data.nodes.map(n => ({ data: n })),
+    ...data.edges.map(([s, rel, t], i) => ({ data: { id: "e" + i, source: s, target: t, rel } })),
+  ],
+  wheelSensitivity: 0.3,
+  minZoom: 0.2,
+  maxZoom: 3,
+  style: [
+    { selector: "node", style: {
+      label: "data(label)", "font-size": 13, "text-valign": "center", "text-halign": "center", "text-wrap": "wrap", "text-max-width": 140,
+      shape: e => SHAPES[e.data("kind")], "background-color": e => COLORS[e.data("kind")],
+      color: e => ["route", "page", "endpoint"].includes(e.data("kind")) ? "#fff" : "#1d2b2e",
+      width: "label", height: "label", padding: 8 } },
+    { selector: "edge", style: {
+      width: 1.5, "line-color": "#b8c2c0", "target-arrow-color": "#b8c2c0", "target-arrow-shape": "triangle", "curve-style": "bezier" } },
+    { selector: ".faded", style: { opacity: 0.12 } },
+    { selector: ".hit", style: { "border-width": 3, "border-color": "#c79a21" } },
+  ],
 });
-const links = data.links.map(([s, t]) => ({ s: byId.get(s), t: byId.get(t) }));
 
-function el(tag, attrs, parent) {
-  const e = document.createElementNS(NS, tag);
-  for (const k in attrs) e.setAttribute(k, attrs[k]);
-  parent.appendChild(e);
-  return e;
+let current = "breadthfirst";
+function layout(name, animate = true) {
+  current = name;
+  const shown = cy.elements(":visible");
+  const roots = shown.nodes('[kind = "route"], [kind = "test"]');
+  shown.layout(name === "breadthfirst"
+    ? { name, directed: true, roots, spacingFactor: 0.9, animate, animationDuration: 400, fit: true, padding: 30 }
+    : { name, animate, animationDuration: 400, nodeRepulsion: 9000, idealEdgeLength: 90, fit: true, padding: 30 }).run();
 }
-const lineEls = links.map(() => el("line", {}, document.getElementById("edges")));
-const nodeEls = data.nodes.map(n => {
-  const g = el("g", {}, document.getElementById("nodes"));
-  el("circle", { r: 6 + Math.sqrt(n.symbols), fill: palette[groups.indexOf(n.group) % palette.length] }, g);
-  const t = el("text", { x: 10, y: 4 }, g);
-  t.textContent = n.id;
-  el("title", {}, g).textContent = n.symbols + " symbols";
-  g.addEventListener("pointerdown", e => { drag = n; g.setPointerCapture(e.pointerId); });
-  return g;
+document.querySelectorAll("[data-layout]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-layout]").forEach(x => x.classList.toggle("on", x === b));
+  layout(b.dataset.layout);
 });
-let drag = null;
-svg.addEventListener("pointermove", e => { if (drag) { drag.x = e.clientX; drag.y = e.clientY; drag.vx = drag.vy = 0; alpha = 0.5; } });
-svg.addEventListener("pointerup", () => { drag = null; });
+document.getElementById("fit").onclick = () => cy.animate({ fit: { padding: 30 } });
 
-let alpha = 1;
-function tick() {
-  const ns = data.nodes;
-  for (const a of ns) for (const b of ns) {
-    if (a === b) continue;
-    let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 0.01;
-    const f = 2500 / d2;
-    a.vx += dx * f * alpha; a.vy += dy * f * alpha;
-  }
-  for (const l of links) {
-    const dx = l.t.x - l.s.x, dy = l.t.y - l.s.y, d = Math.hypot(dx, dy) || 1;
-    const f = (d - 90) * 0.02 * alpha;
-    l.s.vx += dx / d * f; l.s.vy += dy / d * f;
-    l.t.vx -= dx / d * f; l.t.vy -= dy / d * f;
-  }
-  for (const n of ns) {
-    n.vx += (W / 2 - n.x) * 0.002 * alpha; n.vy += (H / 2 - n.y) * 0.002 * alpha;
-    if (n !== drag) { n.x += n.vx; n.y += n.vy; }
-    n.vx *= 0.8; n.vy *= 0.8;
-  }
-  links.forEach((l, i) => {
-    lineEls[i].setAttribute("x1", l.s.x); lineEls[i].setAttribute("y1", l.s.y);
-    lineEls[i].setAttribute("x2", l.t.x); lineEls[i].setAttribute("y2", l.t.y);
+// Start with the main path only: tests and the components that call no API wait behind a checkbox.
+const onPath = cy.nodes('[kind = "component"]').filter(n => n.outgoers('edge[rel = "calls"]').length > 0);
+const hidden = { test: true, component: true };
+function visible() {
+  cy.nodes().forEach(n => {
+    const k = n.data("kind");
+    const show = !hidden[k] || (k === "component" && onPath.contains(n) && !hidden.allComponents);
+    n.style("display", show ? "element" : "none");
   });
-  data.nodes.forEach((n, i) => nodeEls[i].setAttribute("transform", `translate(${n.x},${n.y})`));
-  alpha = Math.max(alpha * 0.995, 0.02);
-  requestAnimationFrame(tick);
 }
-tick();
+const kinds = document.getElementById("kinds");
+const boxes = [["tests", "test", COLORS.test], ["all components", "component", COLORS.component]];
+boxes.forEach(([text, k, color]) => {
+  const n = cy.nodes(`[kind = "${k}"]`).length;
+  const label = document.createElement("label");
+  label.innerHTML = `<input type="checkbox"><span class="key" style="background:${color}"></span>show ${text} (${n})`;
+  label.querySelector("input").onchange = e => {
+    hidden[k] = !e.target.checked;
+    if (k === "component") hidden.allComponents = false;
+    visible(); layout(current);
+  };
+  kinds.appendChild(label);
+});
+const legend = document.createElement("span");
+legend.innerHTML = Object.entries(COLORS).map(([k, c]) => `<span class="key" style="background:${c}"></span> ${k}`).join(" &nbsp; ");
+kinds.appendChild(legend);
+
+const info = document.getElementById("info");
+cy.on("tap", "node", e => {
+  const n = e.target, near = n.closedNeighborhood();
+  cy.elements().addClass("faded"); near.removeClass("faded");
+  const list = rel => n.connectedEdges(`[rel = "${rel}"]`).map(x => (x.source() === n ? x.target() : x.source()).data("label"));
+  info.innerHTML = `<b>${n.data("label")}</b> · ${n.data("kind")}<br><code>${n.data("loc") || ""}</code><br>` +
+    ["shows", "renders", "calls", "requests", "reads", "tests"].map(r => list(r).length ? `<br><b>${r}</b>: ${list(r).join(", ")}` : "").join("");
+});
+cy.on("tap", e => { if (e.target === cy) { cy.elements().removeClass("faded"); info.innerHTML = ""; } });
+document.getElementById("q").oninput = e => {
+  cy.nodes().removeClass("hit");
+  const q = e.target.value.toLowerCase();
+  if (q) cy.nodes().filter(n => n.data("label").toLowerCase().includes(q)).addClass("hit");
+};
+visible();
+layout("breadthfirst", false);
 </script>
 """
 
 
 def build() -> dict:
-    con = sqlite3.connect(DB)
-    counts = dict(con.execute("select file, count(*) from symbols group by file"))
-    links = con.execute(
-        "select distinct file, target from imports where target <> '' and target <> file"
-    ).fetchall()
-    files = set(counts) | {f for link in links for f in link}
-    nodes = [
-        {"id": f, "group": "/".join(f.split("/")[:2]), "symbols": counts.get(f, 0)}
-        for f in sorted(files)
-    ]
-    return {"nodes": nodes, "links": links}
+    with sqlite3.connect(DB_PATH) as db:
+        nodes, edges = app_flow(db)
+    return {
+        "nodes": [{"id": key, "kind": kind, "label": label, "loc": loc} for key, (kind, label, loc) in nodes.items()],
+        "edges": edges,
+    }
 
 
 if __name__ == "__main__":
     data = build()
     OUT.write_text(PAGE.replace("__DATA__", json.dumps(data)))
-    print(f"{OUT}: {len(data['nodes'])} nodes, {len(data['links'])} links", file=sys.stderr)
+    print(f"{OUT}: {len(data['nodes'])} nodes, {len(data['edges'])} edges", file=sys.stderr)

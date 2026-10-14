@@ -23,7 +23,7 @@ These rules apply to all agents that work in this repository.
 
 - Do not write comments that repeat what the code does.
 - Do not add defensive checks that the domain does not need.
-- Use `tools/codegraph.py` (run `build` first) before you read whole files. Use `find`, `outline`, `show`, `callers` and `endpoint` to locate code.
+- Use `tools/codegraph.py` (run `build` first) before you read whole files. Use `find`, `outline`, `show`, `callers` and `endpoint` to locate code, and `tree` to see how a route reaches its endpoint and tables.
 
 ## Decisions
 
