@@ -13,7 +13,7 @@ The backend has integration tests with pytest. The frontend has no tests (issue 
 - Frontend unit and characterization tests: `vitest`. It reads `vite.config.ts`, so it needs no extra configuration.
 - End-to-end tests: `@playwright/test`. Playwright starts the backend and the frontend servers itself.
 - Property-based tests: `hypothesis` in the backend dev dependencies.
-- Mutation tests: `mutmut` with a configuration in `backend/pyproject.toml`. It is not in the dev dependencies, because it is slow and a person runs it by hand.
+- Mutation tests: `mutmut` with a configuration in `backend/pyproject.toml`. It is not in the dev dependencies, because a person runs it by hand, not every test run.
 - Architecture tests: no new tool. The backend uses `ast` from the standard library. The frontend uses `vitest` and `node:fs`.
 
 ## Consequences
