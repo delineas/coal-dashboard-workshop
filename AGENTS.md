@@ -44,3 +44,9 @@ These rules apply to all agents that work in this repository.
 
 - Put work documents that you do not need after the session in `.scratchpad/`.
 - Git ignores `.scratchpad/`. Do not commit its contents.
+
+## Data questions
+
+- Do not read the CSV files in `data/` to answer a data question.
+- Run `python3 scripts/query.py "<SQL>"` from the repository root instead. It prints tab-separated rows from `backend/coal.sqlite`, read-only.
+- Run it with no argument to print the schema. If `backend/coal.sqlite` is missing, run `cd backend && python3 -m app.etl` first.
