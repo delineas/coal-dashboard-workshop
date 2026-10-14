@@ -27,3 +27,7 @@ __pycache__/
 *.sqlite
 *.db
 *.log
+
+# Test output
+frontend/test-results/
+frontend/playwright-report/
