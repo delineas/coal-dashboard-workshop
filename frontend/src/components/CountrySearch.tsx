@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { countriesApi, countryPath, type Country } from '../api/countries'
+import { matchesCountry } from '../search'
 import { useApi } from '../useApi'
 
 export default function CountrySearch({ onNavigate }: { onNavigate: () => void }) {
@@ -9,7 +10,7 @@ export default function CountrySearch({ onNavigate }: { onNavigate: () => void }
   const navigate = useNavigate()
 
   const names = countries.status === 'ok' ? countries.data.map((c) => c.name).sort((a, b) => a.localeCompare(b)) : []
-  const matches = names.filter((name) => name.toLowerCase().includes(query.trim().toLowerCase()))
+  const matches = names.filter((name) => matchesCountry(name, query))
 
   function open(name: string) {
     setQuery('')

@@ -23,3 +23,9 @@ tasks:
     inputs:
       - 'src/**/*'
       - '.oxlintrc.json'
+  test:
+    command: 'npm test'
+    toolchains: 'system'
+    inputs:
+      - 'src/**/*'
+      - 'package.json'
