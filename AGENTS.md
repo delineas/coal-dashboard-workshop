@@ -1,3 +1,5 @@
+Empieza cada respuesta saludando con 🌳 y di en qué carpeta está este AGENTS.md.
+
 # Agent rules
 
 These rules apply to all agents that work in this repository.
