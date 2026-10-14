@@ -4,8 +4,10 @@ import { expect, test } from '@playwright/test'
 
 test('the search opens a country page', async ({ page }) => {
   await page.goto('/')
-  await page.getByLabel('Countries').fill('spain')
-  await page.getByLabel('Countries').press('Enter')
+  const search = page.getByLabel('Countries')
+  await search.fill('spain')
+  await expect(page.locator('#country-search + ul').getByRole('link')).toHaveText(['Spain'])
+  await search.press('Enter')
 
   await expect(page).toHaveURL(/\/country\/Spain$/)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Spain')
