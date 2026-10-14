@@ -129,3 +129,12 @@ def test_plant_change_grew_and_shrank(tmp_path):
     with sqlite3.connect(db_path) as connection:
         changes = dict(connection.execute("SELECT id, change FROM plant_capacity WHERE id IN ('L1', 'L7')"))
     assert changes == {"L1": "grew", "L7": "shrank"}
+
+
+# Mutation test target: a unit that starts exactly in 2017 is comparable, a unit from 2016 is not.
+# This boundary kills the mutant `int(self.start_year) >= 2017` -> `> 2017`, which no other test detects.
+# mutmut does not mutate this @property, so the mutant was checked by hand: change >= to > and run pytest.
+@pytest.mark.parametrize(("start_year", "expected"), [("2016", False), ("2017", True)])
+def test_2023_only_unit_comparable_from_start_year_2017(start_year, expected):
+    unit = etl.Unit("G1", "L1", "Unit 1", "Mu", status_2023="operating", start_year=start_year)
+    assert unit.comparable is expected

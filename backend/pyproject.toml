@@ -16,3 +16,8 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Mutation tests: run `../.venv/bin/mutmut run` in backend/, then `../.venv/bin/mutmut results`.
+# mutmut does not mutate @property methods (for example Unit.comparable). Check those rules with a manual mutation.
+[tool.mutmut]
+source_paths = ["app/etl.py"]
+pytest_add_cli_args_test_selection = ["tests/test_etl.py"]

@@ -31,3 +31,4 @@ __pycache__/
 # Test output
 frontend/test-results/
 frontend/playwright-report/
+backend/mutants/
