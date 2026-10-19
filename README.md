@@ -8,6 +8,12 @@ The dashboard compares operating coal capacity by country in 2017 and in 2023, w
 
 Stack: React + Tailwind frontend, FastAPI backend, SQLite database. The stack started as a copy of `basecamp-tool`.
 
+## Branches
+
+- `main`: the project at the end of the course. It is the same as `project-end`.
+- `project-start`: `main` before the merge of the test types, the code graph and the data CLI. Use it to do the course work again from the start.
+- `project-end`: the project at the end of the course, with the test types, the code graph and the data CLI.
+
 ## Setup
 
 Backend (Python 3.11+):
