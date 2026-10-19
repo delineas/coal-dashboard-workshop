@@ -45,3 +45,9 @@ These rules apply to all agents that work in this repository.
 
 - Put work documents that you do not need after the session in `.scratchpad/`.
 - Git ignores `.scratchpad/`. Do not commit its contents.
+
+## Data questions
+
+- Do not read the CSV files in `data/` to answer questions about the data.
+- Use the CLI in `backend/app/cli.py` (see `README.md`). Run `schema` first, then `sql`.
+- Read the CSV files only when the question is about a column that the database does not have.
